@@ -34,3 +34,16 @@ Traditional linear risk models (e.g., standard normal parametric VaR) notoriousl
 * **Design Pattern:** Modular, object-oriented pipeline designed for automated data ingestion, backtesting, stochastic path generation, and risk report generation.
 
 ---
+
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone [https://github.com/YOUR_USERNAME/macro-crisis-var-stress-engine.git](https://github.com/YOUR_USERNAME/macro-crisis-var-stress-engine.git)
+cd macro-crisis-var-stress-engine
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run full historical backtest and Monte Carlo simulation
+python main.py
