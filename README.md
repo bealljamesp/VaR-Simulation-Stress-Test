@@ -1,4 +1,4 @@
-# portfolio-stress-testing-var-simulation
+# VaR Simulation Stress Test
 
 An institutional-grade market risk analytics and Monte Carlo stress-testing engine built in Python. This framework evaluates the systemic underestimation of traditional parametric (Gaussian) and historical Value at Risk (VaR) models during macroeconomic shocks, isolating true structural risk factors from historical coincidences.
 
