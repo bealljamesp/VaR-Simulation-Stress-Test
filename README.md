@@ -1,3 +1,7 @@
+[![CI Test Suite](https://github.com/bealljamesp/anomaly-detection-engine/actions/workflows/tests.yml/badge.svg)](https://github.com/bealljamesp/anomaly-detection-engine/actions/workflows/tests.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 # VaR Simulation Stress Test
 
 An institutional-grade market risk analytics and Monte Carlo stress-testing engine built in Python. This framework evaluates the systemic underestimation of traditional parametric (Gaussian) and historical Value at Risk (VaR) models during macroeconomic shocks, isolating true structural risk factors from historical coincidences.
