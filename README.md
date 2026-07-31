@@ -1,4 +1,4 @@
-# VaR Simulation Stress Test
+# Quantitative Risk & Econometrics: VaR Simulation Stress Test
 
 [![CI Test Suite](https://github.com/bealljamesp/anomaly-detection-engine/actions/workflows/tests.yml/badge.svg)](https://github.com/bealljamesp/anomaly-detection-engine/actions/workflows/tests.yml)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
