@@ -92,9 +92,7 @@ class PortfolioVaR:
 
 
 if __name__ == "__main__":
-    # Define shared portfolio allocations
-    tickers = ["SPY", "C", "BAC", "XLF", "GS"]
-    weights = [0.2, 0.2, 0.2, 0.2, 0.2]
+    # Define shared portfolio values
     initial_capital = 1_000_000
     confidence_level = 0.95
 
@@ -102,16 +100,16 @@ if __name__ == "__main__":
     portfolios = [
         PortfolioVaR(
             name="2008 Financial Crisis Portfolio",
-            tickers=tickers,
-            weights=weights,
+            tickers=["SPY", "C", "BAC", "XLF", "GS"],
+            weights=[0.2, 0.2, 0.2, 0.2, 0.2],
             start_date="2007-01-01",
             end_date="2009-12-31",
             initial_capital=initial_capital,
         ),
         PortfolioVaR(
             name="Post-COVID Market Portfolio",
-            tickers=tickers,
-            weights=weights,
+            tickers=["SPY", "C", "BAC", "XLF"],
+            weights=[0.25, 0.25, 0.25, 0.25],
             start_date="2021-01-01",
             end_date="2024-01-01",
             initial_capital=initial_capital,
