@@ -11,6 +11,11 @@ class PortfolioVaR:
         self.name = name
         self.tickers = tickers
         self.weights = np.array(weights)
+        # Validate that weights sum to 1.0 upon instantiation
+        if not np.isclose(np.sum(self.weights), 1.0, atol=1e-4):
+            raise ValueError(
+                f"Portfolio weights must sum to 1.0. Current sum: {np.sum(self.weights)}"
+            )
         self.start_date = start_date
         self.end_date = end_date
         self.initial_capital = initial_capital
