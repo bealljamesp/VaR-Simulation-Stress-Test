@@ -62,7 +62,7 @@ def generate_parameter_grid() -> dict[str, dict[str, float | str]]:
 
 def run_shock_monte_carlo(
     params: dict[str, float | str],
-    n_paths: int = 3000,
+    n_paths: int = 5000,
     n_days: int = 90,
     initial_price: float = 100.0,
     distress_threshold: float = -0.40,
