@@ -26,9 +26,43 @@ def generate_parameter_grid() -> dict[str, dict[str, float | str]]:
     return grid
 
 
+# def run_shock_monte_carlo(
+#     params: dict[str, float | str],
+#     n_paths: int = 5000,
+#     n_days: int = 90,
+#     initial_price: float = 100.0,
+#     distress_threshold: float = -0.40,
+# ) -> tuple[float, np.ndarray]:
+#     dt: float = 1.0 / 252.0
+#     daily_vol: float = float(params["annual_vol"]) / np.sqrt(252.0)
+#     df: float = float(params["t_df"])
+#     gamma: float = float(params["gjr_gamma"])
+
+#     raw_innovations = t.rvs(df=df, size=(n_paths, n_days))
+#     scale_factor = np.sqrt(df / (df - 2.0)) if df > 2.0 else 1.0
+#     z = raw_innovations / scale_factor
+
+#     # Inject exogenous market shock on Day 30
+#     shock_day = 30
+#     if n_days > shock_day:
+#         shock_magnitude = -0.15 * (1.0 + gamma * 5.0)
+#         z[:, shock_day] = shock_magnitude / (daily_vol * np.sqrt(dt))
+
+#     daily_rets = -0.5 * (daily_vol**2) * dt + daily_vol * np.sqrt(dt) * z
+#     log_rets = np.hstack([np.zeros((n_paths, 1)), np.cumsum(daily_rets, axis=1)])
+#     price_paths = initial_price * np.exp(log_rets)
+
+#     rolling_max = np.maximum.accumulate(price_paths, axis=1)
+#     drawdowns = (price_paths - rolling_max) / rolling_max
+#     max_drawdowns = np.min(drawdowns, axis=1)
+
+#     breach_count = np.sum(max_drawdowns <= distress_threshold)
+#     return float(breach_count / n_paths), max_drawdowns
+
+
 def run_shock_monte_carlo(
     params: dict[str, float | str],
-    n_paths: int = 5000,
+    n_paths: int = 3000,
     n_days: int = 90,
     initial_price: float = 100.0,
     distress_threshold: float = -0.40,
@@ -42,11 +76,25 @@ def run_shock_monte_carlo(
     scale_factor = np.sqrt(df / (df - 2.0)) if df > 2.0 else 1.0
     z = raw_innovations / scale_factor
 
-    # Inject exogenous market shock on Day 30
+    # Inject a much more severe systemic shock on Day 30
+    # Scaled dynamically by volatility tier, tail thickness (lower df = heavier tail), and asymmetry
+
+    # 1st attempt at a shock scenario, commented out for now. Results were 24%-15% shock simulation compared to 1.5%-0.4% non-shock simulation. This is a significant increase in the probability of distress, indicating that the shock scenario has a substantial impact on the risk profile of the institutions being analyzed.
+
+    # shock_day = 30
+    # if n_days > shock_day:
+    #     tail_multiplier = (
+    #         3.0 / df
+    #     )  # Heavier tails (e.g., df=3.5) amplify the shock impact
+    #     shock_magnitude = -0.28 * (1.0 + gamma * 10.0) * tail_multiplier
+    #     z[:, shock_day] = shock_magnitude / (daily_vol * np.sqrt(dt))
+
+    # Increase base shock severity and tail sensitivity
     shock_day = 30
     if n_days > shock_day:
-        shock_magnitude = -0.15 * (1.0 + gamma * 5.0)
-        z[:, shock_day] = shock_magnitude / (daily_vol * np.sqrt(dt))
+    tail_multiplier = 4.0 / df
+    shock_magnitude = -0.42 * (1.0 + gamma * 15.0) * tail_multiplier
+    z[:, shock_day] = shock_magnitude / (daily_vol * np.sqrt(dt))
 
     daily_rets = -0.5 * (daily_vol**2) * dt + daily_vol * np.sqrt(dt) * z
     log_rets = np.hstack([np.zeros((n_paths, 1)), np.cumsum(daily_rets, axis=1)])
