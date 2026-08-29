@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from stress_engine.monte_carlo import (
+from stress_engine.visualization import (
     generate_parameter_grid,
     run_extended_monte_carlo,
 )

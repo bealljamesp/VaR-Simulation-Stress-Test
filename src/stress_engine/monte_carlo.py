@@ -1,8 +1,4 @@
-"""Monte Carlo Stress Testing Engine (4D Parametric Grid).
-
-Consolidates baseline simulation and shock-testing architecture into a single,
-future-proof module leveraging explicit vectorization and NumPy linear algebra.
-"""
+"""Monte Carlo Stress Testing Engine (4D Parametric Grid)."""
 
 from __future__ import annotations
 
@@ -15,29 +11,16 @@ import pandas as pd
 
 
 def generate_4d_parameter_grid() -> dict[str, dict[str, float | str]]:
-    """Generates the 81-node 4D parametric stress grid."""
-    vol_tiers = {
-        "Vol-Low": 0.10,
-        "Vol-Norm": 0.20,
-        "Vol-High": 0.35,
-    }
-    tail_tiers = {
-        "Tail-Fat": 3.5,
-        "Tail-Norm": 8.0,
-        "Tail-Thin": 30.0,
-    }
-    asym_tiers = {
-        "Asym-Low": 0.01,
-        "Asym-Norm": 0.05,
-        "Asym-High": 0.15,
-    }
+    vol_tiers = {"Vol-Low": 0.10, "Vol-Norm": 0.20, "Vol-High": 0.35}
+    tail_tiers = {"Tail-Fat": 3.5, "Tail-Norm": 8.0, "Tail-Thin": 30.0}
+    asym_tiers = {"Asym-Low": 0.01, "Asym-Norm": 0.05, "Asym-High": 0.15}
     shock_tiers = {
         "Shock-Mild": -0.15,
         "Shock-Mod": -0.30,
         "Shock-Sev": -0.50,
     }
 
-    grid: dict[str, dict[str, float | str]] = {}
+    grid = {}
     for v_name, v_val, t_name, t_val, a_name, a_val, s_name, s_val in itertools.product(
         vol_tiers.keys(),
         vol_tiers.values(),
@@ -59,20 +42,18 @@ def generate_4d_parameter_grid() -> dict[str, dict[str, float | str]]:
             "base_shock": s_val,
             "Shock_Tier": s_name,
         }
-
     return grid
 
 
 def run_comprehensive_stress_engine(
     n_paths: int = 5000, n_days: int = 90
 ) -> pd.DataFrame:
-    """Executes the 4D Monte Carlo simulation engine across all 81 nodes."""
     grid = generate_4d_parameter_grid()
-    records: list[dict[str, float | str]] = []
+    records = []
 
     print(
-        f"Initializing Unified Stress Engine: Evaluating {len(grid)} structural"
-        f" nodes ({n_paths} paths each)..."
+        f"Running 4D Stress Engine across {len(grid)} nodes ({n_paths} paths"
+        " each)..."
     )
     start_time = time.time()
 
@@ -82,26 +63,22 @@ def run_comprehensive_stress_engine(
         gjr_gamma = float(profile["gjr_gamma"])
         base_shock = float(profile["base_shock"])
 
-        # Vectorized path generation block
-        # Generate Student-t innovations for all paths simultaneously: shape (n_paths, n_days)
+        # Vectorized Student-t generation
         innovations = np.random.standard_t(df=t_df, size=(n_paths, n_days))
         returns_matrix = daily_vol * innovations
 
-        # Inject Day-30 systemic shock scaled dynamically by asymmetry and tail thickness
+        # Scaled shock calculation: explicitly couples tail weight and asymmetry
+        # so that vulnerable profiles experience amplified drawdowns.
         shock_day = 30
         if shock_day < n_days:
-            scaled_shock = base_shock * (1.0 + gjr_gamma * 3.0) * (5.0 / t_df)
+            scaled_shock = base_shock * (1.0 + gjr_gamma * 10.0) * (6.0 / t_df)
             returns_matrix[:, shock_day] += scaled_shock
 
-        # Convert returns to cumulative price paths starting at base 100
         price_paths = 100 * np.exp(np.cumsum(returns_matrix, axis=1))
-
-        # Calculate peak-to-trough drawdowns across paths
         running_max = np.maximum.accumulate(price_paths, axis=1)
         drawdowns = (price_paths - running_max) / running_max
         max_dds = np.min(drawdowns, axis=1)
 
-        # Aggregate outcome metrics
         records.append(
             {
                 "Institution_Key": inst_name,
@@ -117,20 +94,18 @@ def run_comprehensive_stress_engine(
 
     df_results = pd.DataFrame(records)
 
-    # Ensure output directory exists and save parquet artifact
+    # Save artifact back to data/raw/
     output_dir = Path("../data/raw")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / "synthetic_4d_monte_carlo_results.parquet"
     df_results.to_parquet(output_path)
 
-    elapsed = time.time() - start_time
     print(
-        f"Simulation complete in {elapsed:.2f} seconds. Results saved to"
-        f" '{output_path}'."
+        f"Simulation complete in {time.time() - start_time:.2f}s. Saved to"
+        f" {output_path}"
     )
     return df_results
 
 
 if __name__ == "__main__":
-    df_output = run_comprehensive_stress_engine(n_paths=5000, n_days=90)
-    print(df_output.head())
+    run_comprehensive_stress_engine()
