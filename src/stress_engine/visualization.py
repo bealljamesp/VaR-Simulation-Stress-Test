@@ -9,7 +9,6 @@ from stress_engine.monte_carlo import (
     run_extended_monte_carlo,
 )
 
-# Set aesthetic styling
 sns.set_theme(style="whitegrid", palette="muted")
 plt.rcParams.update(
     {
@@ -26,9 +25,9 @@ def build_visualization_dataset() -> pd.DataFrame:
     grid = generate_parameter_grid()
     records: list[dict[str, float | str]] = []
 
-    print("Compiling simulation paths for visualization...")
+    print("Compiling maximum drawdown paths for visualization...")
     for _, profile in grid.items():
-        _, max_drawdowns = run_extended_monte_carlo(profile, n_paths=3000, n_days=90)
+        _, max_drawdowns = run_extended_monte_carlo(profile, n_paths=2000, n_days=90)
         for dd in max_drawdowns:
             records.append(
                 {
