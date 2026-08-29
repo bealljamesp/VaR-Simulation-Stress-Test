@@ -80,6 +80,11 @@ if __name__ == "__main__":
         )
 
     df_out = pd.DataFrame(ledger)
-    output_file = "synthetic_monte_carlo_shock_results.parquet"
+
+    # Resolve path to data/raw/ relative to the repository layout
+    output_dir = Path(__file__).resolve().parents[2] / "data" / "raw"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "synthetic_monte_carlo_shock_results.parquet"
+
     df_out.to_parquet(output_file, index=False)
-    print(f"Shock simulation results successfully saved to {output_file}")
+    print(f"Shock simulation results successfully saved to: {output_file}")

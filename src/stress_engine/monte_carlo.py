@@ -81,5 +81,11 @@ if __name__ == "__main__":
         )
 
     df_out = pd.DataFrame(ledger)
-    df_out.to_parquet("synthetic_monte_carlo_results.parquet", index=False)
-    print("Simulation results successfully serialized to disk.")
+
+    # Resolve path to data/raw/ relative to the repository layout
+    output_dir = Path(__file__).resolve().parents[2] / "data" / "raw"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "synthetic_monte_carlo_results.parquet"
+
+    df_out.to_parquet(output_file, index=False)
+    print(f"Results successfully serialized to: {output_file}")
