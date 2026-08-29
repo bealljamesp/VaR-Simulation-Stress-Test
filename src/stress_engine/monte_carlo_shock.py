@@ -92,20 +92,20 @@ def run_shock_monte_carlo(
     # Increase base shock severity and tail sensitivity
     shock_day = 30
     if n_days > shock_day:
-    tail_multiplier = 4.0 / df
-    shock_magnitude = -0.42 * (1.0 + gamma * 15.0) * tail_multiplier
-    z[:, shock_day] = shock_magnitude / (daily_vol * np.sqrt(dt))
+        tail_multiplier = 4.0 / df
+        shock_magnitude = -0.42 * (1.0 + gamma * 15.0) * tail_multiplier
+        z[:, shock_day] = shock_magnitude / (daily_vol * np.sqrt(dt))
 
-    daily_rets = -0.5 * (daily_vol**2) * dt + daily_vol * np.sqrt(dt) * z
-    log_rets = np.hstack([np.zeros((n_paths, 1)), np.cumsum(daily_rets, axis=1)])
-    price_paths = initial_price * np.exp(log_rets)
+        daily_rets = -0.5 * (daily_vol**2) * dt + daily_vol * np.sqrt(dt) * z
+        log_rets = np.hstack([np.zeros((n_paths, 1)), np.cumsum(daily_rets, axis=1)])
+        price_paths = initial_price * np.exp(log_rets)
 
-    rolling_max = np.maximum.accumulate(price_paths, axis=1)
-    drawdowns = (price_paths - rolling_max) / rolling_max
-    max_drawdowns = np.min(drawdowns, axis=1)
+        rolling_max = np.maximum.accumulate(price_paths, axis=1)
+        drawdowns = (price_paths - rolling_max) / rolling_max
+        max_drawdowns = np.min(drawdowns, axis=1)
 
-    breach_count = np.sum(max_drawdowns <= distress_threshold)
-    return float(breach_count / n_paths), max_drawdowns
+        breach_count = np.sum(max_drawdowns <= distress_threshold)
+        return float(breach_count / n_paths), max_drawdowns
 
 
 if __name__ == "__main__":
