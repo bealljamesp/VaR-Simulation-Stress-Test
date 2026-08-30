@@ -1,4 +1,6 @@
-"""Monte Carlo Stress Testing Engine (4D Parametric Grid with Path Tensor Retention)."""
+"""Monte Carlo Stress Testing Engine (4D Parametric Grid)."""
+
+from __future__ import annotations
 
 import itertools
 import time
@@ -45,51 +47,40 @@ def generate_4d_parameter_grid() -> dict[str, dict[str, float | str]]:
 
 def run_comprehensive_stress_engine(
     n_paths: int = 5000, n_days: int = 90
-) -> tuple[pd.DataFrame, np.ndarray]:
+) -> pd.DataFrame:
     grid = generate_4d_parameter_grid()
     records = []
 
-    # Pre-allocate tensor to store full path distribution: (Nodes, Paths, Days)
-    # 81 nodes * 5000 paths * 90 days = 36,450,000 float32 elements (~146 MB)
-    n_nodes = len(grid)
-    master_path_tensor = np.empty((n_nodes, n_paths, n_days), dtype=np.float32)
-
     print(
-        f"Running 4D Stress Engine across {n_nodes} nodes ({n_paths} paths, {n_days} days "
-        f"preserving full path tensors)..."
+        f"Running 4D Stress Engine across {len(grid)} nodes ({n_paths} paths"
+        " each)..."
     )
     start_time = time.time()
 
-    rng = np.random.default_rng(42)
-
-    for idx, (inst_name, profile) in enumerate(grid.items()):
+    for inst_name, profile in grid.items():
         daily_vol = float(profile["annual_vol"]) / np.sqrt(252)
         t_df = float(profile["t_df"])
         gjr_gamma = float(profile["gjr_gamma"])
         base_shock = float(profile["base_shock"])
 
-        # Vectorized Student-t generation using numpy generator
-        innovations = rng.standard_t(df=t_df, size=(n_paths, n_days))
+        # Vectorized Student-t generation
+        innovations = np.random.standard_t(df=t_df, size=(n_paths, n_days))
         returns_matrix = daily_vol * innovations
 
-        # Scaled shock injection at day 30
+        # Scaled shock calculation: explicitly couples tail weight and asymmetry
+        # so that vulnerable profiles experience amplified drawdowns.
         shock_day = 30
         if shock_day < n_days:
             scaled_shock = base_shock * (1.0 + gjr_gamma * 10.0) * (6.0 / t_df)
             returns_matrix[:, shock_day] += scaled_shock
 
         price_paths = 100 * np.exp(np.cumsum(returns_matrix, axis=1))
-
-        # Store path matrix in master tensor
-        master_path_tensor[idx] = price_paths
-
         running_max = np.maximum.accumulate(price_paths, axis=1)
         drawdowns = (price_paths - running_max) / running_max
         max_dds = np.min(drawdowns, axis=1)
 
         records.append(
             {
-                "Node_Index": idx,
                 "Institution_Key": inst_name,
                 "Volatility": profile["Vol_Tier"],
                 "Tail_Tier": profile["Tail_Tier"],
@@ -103,25 +94,17 @@ def run_comprehensive_stress_engine(
 
     df_results = pd.DataFrame(records)
 
-    # Save artifacts back to data/raw/
+    # Save artifact back to data/raw/
     output_dir = Path("../data/raw")
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    PROJECT_ROOT = Path(__file__).resolve().parents[2]
-    output_dir = PROJECT_ROOT / "data" / "raw"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    df_output_path = output_dir / "synthetic_4d_monte_carlo_results.parquet"
-    tensor_output_path = output_dir / "master_path_tensor.npy"
-
-    df_results.to_parquet(df_output_path)
-    np.save(tensor_output_path, master_path_tensor)
+    output_path = output_dir / "synthetic_4d_monte_carlo_results.parquet"
+    df_results.to_parquet(output_path)
 
     print(
-        f"Simulation complete in {time.time() - start_time:.2f}s. Saved summary to "
-        f"{df_output_path} and full tensor shape {master_path_tensor.shape} to {tensor_output_path}"
+        f"Simulation complete in {time.time() - start_time:.2f}s. Saved to"
+        f" {output_path}"
     )
-    return df_results, master_path_tensor
+    return df_results
 
 
 if __name__ == "__main__":

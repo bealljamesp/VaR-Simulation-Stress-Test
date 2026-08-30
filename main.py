@@ -9,7 +9,7 @@ def main() -> None:
     portfolios = [
         PortfolioVaR(
             name="2008 Financial Crisis - Concentrated Financials",
-            tickers=["SPY", "C", "BAC", "XLF", "GS"],
+            tickers=["C", "BAC", "XLF", "GS"],
             weights=[0.2, 0.2, 0.2, 0.2, 0.2],
             start_date="2007-01-01",
             end_date="2009-12-31",
