@@ -1,109 +1,127 @@
-"""Monte Carlo Stress Testing Engine (4D Parametric Grid with Path Tensor Retention)."""
+"""Monte Carlo Stress Testing Engine (4D Parametric Grid with Full Tensor Broadcast)."""
 
 import itertools
 import time
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 
-def generate_4d_parameter_grid() -> dict[str, dict[str, float | str]]:
+def build_parametric_grid_arrays() -> tuple[
+    pd.DataFrame,
+    npt.NDArray[np.float32],
+    npt.NDArray[np.float32],
+    npt.NDArray[np.float32],
+    npt.NDArray[np.float32],
+]:
+    """Generates the Cartesian parameter space, returning metadata and 3D broadcastable parameter vectors."""
     vol_tiers = {"Vol-Low": 0.10, "Vol-Norm": 0.20, "Vol-High": 0.35}
     tail_tiers = {"Tail-Fat": 3.5, "Tail-Norm": 8.0, "Tail-Thin": 30.0}
     asym_tiers = {"Asym-Low": 0.01, "Asym-Norm": 0.05, "Asym-High": 0.15}
-    shock_tiers = {
-        "Shock-Mild": -0.15,
-        "Shock-Mod": -0.30,
-        "Shock-Sev": -0.50,
-    }
+    shock_tiers = {"Shock-Mild": -0.15, "Shock-Mod": -0.30, "Shock-Sev": -0.50}
 
-    grid = {}
-    for v_name, v_val, t_name, t_val, a_name, a_val, s_name, s_val in itertools.product(
-        vol_tiers.keys(),
-        vol_tiers.values(),
-        tail_tiers.keys(),
-        tail_tiers.values(),
-        asym_tiers.keys(),
-        asym_tiers.values(),
-        shock_tiers.keys(),
-        shock_tiers.values(),
-    ):
-        key = f"{v_name}_{t_name}_{a_name}_{s_name}"
-        grid[key] = {
-            "annual_vol": v_val,
-            "Vol_Tier": v_name,
-            "t_df": t_val,
-            "Tail_Tier": t_name,
-            "gjr_gamma": a_val,
-            "Asym_Tier": a_name,
-            "base_shock": s_val,
-            "Shock_Tier": s_name,
+    product_generator = itertools.product(
+        vol_tiers.items(),
+        tail_tiers.items(),
+        asym_tiers.items(),
+        shock_tiers.items(),
+    )
+
+    records = [
+        {
+            "Node_Index": idx,
+            "Institution_Key": f"{v_k}_{t_k}_{a_k}_{s_k}",
+            "Volatility": v_k,
+            "annual_vol": v_v,
+            "Tail_Tier": t_k,
+            "t_df": t_v,
+            "Asymmetry": a_k,
+            "gjr_gamma": a_v,
+            "Shock_Severity": s_k,
+            "base_shock": s_v,
         }
-    return grid
+        for idx, ((v_k, v_v), (t_k, t_v), (a_k, a_v), (s_k, s_v)) in enumerate(
+            product_generator
+        )
+    ]
+
+    df_meta = pd.DataFrame(records)
+
+    # Reshape parameter arrays to (K, 1, 1) for contiguous 3D broadcasting
+    k_nodes = len(df_meta)
+    vol_arr = df_meta["annual_vol"].to_numpy(dtype=np.float32).reshape(k_nodes, 1, 1)
+    tail_arr = df_meta["t_df"].to_numpy(dtype=np.float32).reshape(k_nodes, 1, 1)
+    asym_arr = df_meta["gjr_gamma"].to_numpy(dtype=np.float32).reshape(k_nodes, 1, 1)
+    shock_arr = df_meta["base_shock"].to_numpy(dtype=np.float32).reshape(k_nodes, 1, 1)
+
+    return df_meta, vol_arr, tail_arr, asym_arr, shock_arr
 
 
 def run_comprehensive_stress_engine(
-    n_paths: int = 5000, n_days: int = 90
-) -> tuple[pd.DataFrame, np.ndarray]:
-    grid = generate_4d_parameter_grid()
-    records = []
-
-    # Pre-allocate tensor to store full path distribution: (Nodes, Paths, Days)
-    # 81 nodes * 5000 paths * 90 days = 36,450,000 float32 elements (~146 MB)
-    n_nodes = len(grid)
-    master_path_tensor = np.empty((n_nodes, n_paths, n_days), dtype=np.float32)
+    n_paths: int = 5000,
+    n_days: int = 90,
+    random_seed: int = 42,
+) -> tuple[pd.DataFrame, npt.NDArray[np.float32]]:
+    """Simulates the entire 4D parameter space simultaneously via tensor broadcasting."""
+    start_time = time.time()
+    df_meta, vol_3d, tail_3d, asym_3d, shock_3d = build_parametric_grid_arrays()
+    n_nodes = len(df_meta)
 
     print(
-        f"Running 4D Stress Engine across {n_nodes} nodes ({n_paths} paths, {n_days} days "
-        f"preserving full path tensors)..."
+        f"Simulating 4D Tensor ({n_nodes} nodes x {n_paths} paths x {n_days} days) "
+        f"via broadcasted SIMD operations..."
     )
-    start_time = time.time()
 
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(random_seed)
 
-    for idx, (inst_name, profile) in enumerate(grid.items()):
-        daily_vol = float(profile["annual_vol"]) / np.sqrt(252)
-        t_df = float(profile["t_df"])
-        gjr_gamma = float(profile["gjr_gamma"])
-        base_shock = float(profile["base_shock"])
+    # 1. Vectorized diffusion generation: Shape (81, 5000, 90)
+    daily_vol = vol_3d / np.float32(np.sqrt(252.0))
+    # rng.standard_t accepts (81, 1, 1) df array and broadcasts across (81, 5000, 90)
+    innovations = rng.standard_t(df=tail_3d, size=(n_nodes, n_paths, n_days)).astype(
+        np.float32
+    )
+    returns_tensor = daily_vol * innovations
 
-        # Vectorized Student-t generation using numpy generator
-        innovations = rng.standard_t(df=t_df, size=(n_paths, n_days))
-        returns_matrix = daily_vol * innovations
-
-        # Scaled shock injection at day 30
-        shock_day = 30
-        if shock_day < n_days:
-            scaled_shock = base_shock * (1.0 + gjr_gamma * 10.0) * (6.0 / t_df)
-            returns_matrix[:, shock_day] += scaled_shock
-
-        price_paths = 100 * np.exp(np.cumsum(returns_matrix, axis=1))
-
-        # Store path matrix in master tensor
-        master_path_tensor[idx] = price_paths
-
-        running_max = np.maximum.accumulate(price_paths, axis=1)
-        drawdowns = (price_paths - running_max) / running_max
-        max_dds = np.min(drawdowns, axis=1)
-
-        records.append(
-            {
-                "Node_Index": idx,
-                "Institution_Key": inst_name,
-                "Volatility": profile["Vol_Tier"],
-                "Tail_Tier": profile["Tail_Tier"],
-                "Asymmetry": profile["Asym_Tier"],
-                "Shock_Severity": profile["Shock_Tier"],
-                "Mean_Max_DD": float(np.mean(max_dds)),
-                "P95_Max_DD": float(np.percentile(max_dds, 5)),
-                "Distress_Probability": float(np.mean(max_dds <= -0.40)),
-            }
+    # 2. Vectorized shock injection at day 30: Shape (81, 1, 1)
+    shock_day = 30
+    if shock_day < n_days:
+        scaled_shock = (
+            shock_3d
+            * (np.float32(1.0) + asym_3d * np.float32(10.0))
+            * (np.float32(6.0) / tail_3d)
         )
+        returns_tensor[:, :, shock_day] += scaled_shock[:, :, 0]
 
-    df_results = pd.DataFrame(records)
+    # 3. Geometric price evolution: Shape (81, 5000, 90)
+    price_paths = np.float32(100.0) * np.exp(np.cumsum(returns_tensor, axis=2))
 
-    # Deterministic path resolution anchored to project root
+    # 4. Maximum Drawdown Tensor Reduction
+    running_max = np.maximum.accumulate(price_paths, axis=2)
+    drawdowns = (price_paths - running_max) / running_max
+    max_dds = np.min(drawdowns, axis=2)  # Shape: (81, 5000)
+
+    # 5. Summary Statistics computed across paths (axis 1)
+    df_meta["Mean_Max_DD"] = np.mean(max_dds, axis=1)
+    df_meta["P95_Max_DD"] = np.percentile(max_dds, 5.0, axis=1)
+    df_meta["Distress_Probability"] = np.mean(max_dds <= -0.40, axis=1)
+
+    # Canonical projection of results
+    output_columns = [
+        "Node_Index",
+        "Institution_Key",
+        "Volatility",
+        "Tail_Tier",
+        "Asymmetry",
+        "Shock_Severity",
+        "Mean_Max_DD",
+        "P95_Max_DD",
+        "Distress_Probability",
+    ]
+    df_results = df_meta.loc[:, output_columns]
+
+    # Save artifacts back to data/raw/
     project_root = Path(__file__).resolve().parents[2]
     output_dir = project_root / "data" / "raw"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -112,13 +130,16 @@ def run_comprehensive_stress_engine(
     tensor_output_path = output_dir / "master_path_tensor.npy"
 
     df_results.to_parquet(df_output_path, index=False)
-    np.save(tensor_output_path, master_path_tensor)
+    np.save(tensor_output_path, price_paths)
 
+    elapsed = time.time() - start_time
     print(
-        f"Simulation complete in {time.time() - start_time:.2f}s. "
-        f"Saved summary to {df_output_path} and tensor {master_path_tensor.shape} to {tensor_output_path}"
+        f"Simulation complete in {elapsed:.2f}s.\n"
+        f"  - Metrics Parquet: {df_output_path} ({len(df_results)} rows)\n"
+        f"  - Master Tensor:   {tensor_output_path} (Shape: {price_paths.shape}, Dtype: {price_paths.dtype})"
     )
-    return df_results, master_path_tensor
+
+    return df_results, price_paths
 
 
 if __name__ == "__main__":
