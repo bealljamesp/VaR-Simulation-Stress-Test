@@ -246,3 +246,46 @@ class PortfolioVaR:
             confidence_level=self.confidence_level,
         )
         return backtest, realized_returns, var_thresholds
+
+    def run_fhs_out_of_sample_backtest(
+        self,
+        lookback_window: int = 252,
+    ) -> tuple[BacktestResult, npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Executes Filtered Historical Simulation (FHS) backtest combining GJR-GARCH(1,1)
+
+        conditional volatility with empirical standardized residual quantiles.
+        """
+        from stress_engine.volatility import fit_gjr_garch
+
+        if self.portfolio_returns is None:
+            self.run_analysis()
+
+        assert self.portfolio_returns is not None
+        _, cond_sigma = fit_gjr_garch(self.portfolio_returns)
+
+        # De-volatilize returns into standardized innovations
+        standardized_residuals = self.portfolio_returns / np.maximum(cond_sigma, 1e-8)
+
+        # Stride training windows over standardized residuals to compute rolling empirical tail quantiles
+        # Shape: (T - W, W)
+        res_windows = np.lib.stride_tricks.sliding_window_view(
+            standardized_residuals[:-1], window_shape=lookback_window
+        )
+
+        alpha = 1.0 - self.confidence_level
+        # Empirical innovations quantile along lookback window: vector of length T - W
+        empirical_q = np.percentile(res_windows, alpha * 100.0, axis=1)
+
+        # Strictly out-of-sample sigma forecast
+        forecast_sigma = cond_sigma[lookback_window - 1 : -1]
+        realized_returns = self.portfolio_returns[lookback_window:]
+
+        # Dynamic FHS threshold in return space (negative loss cutoff)
+        var_thresholds = empirical_q * forecast_sigma
+
+        backtest = run_full_var_backtest(
+            returns=realized_returns,
+            var_thresholds=var_thresholds,
+            confidence_level=self.confidence_level,
+        )
+        return backtest, realized_returns, var_thresholds

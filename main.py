@@ -74,7 +74,7 @@ def main() -> None:
             f"     - Christoffersen Indep: LR={param_bt.christoffersen_stat:.3f} (p={param_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if param_bt.christoffersen_reject else 'ACCEPT H0'}"
         )
 
-        # EWMA Dynamic Volatility Out-of-Sample Backtest
+        # 3. EWMA Dynamic Volatility Out-of-Sample Backtest
         ewma_bt, _, _ = port.run_ewma_out_of_sample_backtest(
             lookback_window=252, decay_factor=0.94
         )
@@ -90,7 +90,7 @@ def main() -> None:
             f"     - Christoffersen Indep: LR={ewma_bt.christoffersen_stat:.3f} (p={ewma_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if ewma_bt.christoffersen_reject else 'ACCEPT H0'}"
         )
 
-        # GJR-GARCH(1,1) Asymmetric Dynamic Out-of-Sample Backtest
+        # 4. GJR-GARCH(1,1) Asymmetric Dynamic Out-of-Sample Backtest
         garch_bt, _, _ = port.run_gjr_garch_out_of_sample_backtest(lookback_window=252)
 
         print("  4. Dynamic GJR-GARCH(1,1) (Asymmetric Leverage):")
@@ -102,6 +102,20 @@ def main() -> None:
         )
         print(
             f"     - Christoffersen Indep: LR={garch_bt.christoffersen_stat:.3f} (p={garch_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if garch_bt.christoffersen_reject else 'ACCEPT H0'}"
+        )
+
+        # 5. Filtered Historical Simulation (FHS - GJR-GARCH + Empirical Tail)
+        fhs_bt, _, _ = port.run_fhs_out_of_sample_backtest(lookback_window=252)
+
+        print("  5. Filtered Historical Simulation (FHS / GJR-GARCH Tail):")
+        print(
+            f"     - Breaches:             {fhs_bt.total_exceptions} / {fhs_bt.total_observations} ({fhs_bt.empirical_rate * 100:.2f}%)"
+        )
+        print(
+            f"     - Kupiec POF:           LR={fhs_bt.kupiec_stat:.3f} (p={fhs_bt.kupiec_p_value:.4f}) -> {'REJECT H0' if fhs_bt.kupiec_reject else 'ACCEPT H0'}"
+        )
+        print(
+            f"     - Christoffersen Indep: LR={fhs_bt.christoffersen_stat:.3f} (p={fhs_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if fhs_bt.christoffersen_reject else 'ACCEPT H0'}"
         )
 
 
