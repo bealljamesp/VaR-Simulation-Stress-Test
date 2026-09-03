@@ -6,7 +6,7 @@ from stress_engine.portfolio import PortfolioVaR
 def main() -> None:
     portfolios = [
         PortfolioVaR(
-            name="2008 Financial Crisis - Concentrated Financials",
+            name="2008 Crisis - Concentrated Financials",
             tickers=["C", "BAC", "XLF", "GS"],
             weights=[0.25, 0.25, 0.25, 0.25],
             start_date="2007-01-01",
@@ -15,7 +15,7 @@ def main() -> None:
             confidence_level=0.95,
         ),
         PortfolioVaR(
-            name="2008 Financial Crisis - Multi-Asset Diverse",
+            name="2008 Crisis - Multi-Asset Diverse",
             tickers=["SPY", "TLT", "GLD", "DBC"],
             weights=[0.40, 0.30, 0.20, 0.10],
             start_date="2007-01-01",
@@ -26,35 +26,52 @@ def main() -> None:
     ]
 
     for port in portfolios:
-        print("\n" + "=" * 60)
+        print("\n" + "=" * 65)
         print(f"PORTFOLIO: {port.name}")
         print(f"HORIZON:   {port.start_date} to {port.end_date}")
-        print("=" * 60)
+        print("=" * 65)
 
         metrics = port.run_analysis()
-        backtest = port.run_backtest()
+        print(f"Confidence Level:            {port.confidence_level * 100:.1f}%")
+        print(
+            f"  In-Sample Hist VaR:        {metrics['hist_pct'] * 100:.2f}%  (${metrics['hist_dollar']:,.2f})"
+        )
+        print(
+            f"  In-Sample Param VaR:       {metrics['param_pct'] * 100:.2f}%  (${metrics['param_dollar']:,.2f})"
+        )
 
-        print(f"Confidence Level:           {port.confidence_level * 100:.1f}%")
+        # 252-day Rolling Out-of-Sample Backtests
+        hist_bt, _, _ = port.run_rolling_out_of_sample_backtest(
+            lookback_window=252, method="historical"
+        )
+        param_bt, _, _ = port.run_rolling_out_of_sample_backtest(
+            lookback_window=252, method="parametric"
+        )
+
+        print("-" * 65)
         print(
-            f"  Historical VaR (1-Day):   {metrics['hist_pct'] * 100:.2f}%  (${metrics['hist_dollar']:,.2f})"
+            "ROLLING OUT-OF-SAMPLE BACKTEST (252-Day Window, 502 Out-of-Sample Days):"
+        )
+        print("  1. Rolling Historical Simulation:")
+        print(
+            f"     - Breaches:             {hist_bt.total_exceptions} / {hist_bt.total_observations} ({hist_bt.empirical_rate * 100:.2f}%)"
         )
         print(
-            f"  Parametric VaR (1-Day):   {metrics['param_pct'] * 100:.2f}%  (${metrics['param_dollar']:,.2f})"
-        )
-        print("-" * 60)
-        print("REGULATORY BACKTESTING (Kupiec & Christoffersen):")
-        print(f"  Observations:             {backtest.total_observations}")
-        print(
-            f"  Breaches:                 {backtest.total_exceptions} (Empirical: {backtest.empirical_rate * 100:.2f}%)"
+            f"     - Kupiec POF:           LR={hist_bt.kupiec_stat:.3f} (p={hist_bt.kupiec_p_value:.4f}) -> {'REJECT H0' if hist_bt.kupiec_reject else 'ACCEPT H0'}"
         )
         print(
-            f"  Kupiec POF LR:            {backtest.kupiec_stat:.3f} (p={backtest.kupiec_p_value:.4f}) -> {'REJECT H0' if backtest.kupiec_reject else 'ACCEPT H0'}"
+            f"     - Christoffersen Indep: LR={hist_bt.christoffersen_stat:.3f} (p={hist_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if hist_bt.christoffersen_reject else 'ACCEPT H0'}"
+        )
+
+        print("  2. Rolling Parametric (Normal):")
+        print(
+            f"     - Breaches:             {param_bt.total_exceptions} / {param_bt.total_observations} ({param_bt.empirical_rate * 100:.2f}%)"
         )
         print(
-            f"  Christoffersen Indep LR:  {backtest.christoffersen_stat:.3f} (p={backtest.christoffersen_p_value:.4f}) -> {'REJECT H0' if backtest.christoffersen_reject else 'ACCEPT H0'}"
+            f"     - Kupiec POF:           LR={param_bt.kupiec_stat:.3f} (p={param_bt.kupiec_p_value:.4f}) -> {'REJECT H0' if param_bt.kupiec_reject else 'ACCEPT H0'}"
         )
         print(
-            f"  Combined Conditional LR:  {backtest.combined_stat:.3f} (p={backtest.combined_p_value:.4f}) -> {'REJECT H0' if backtest.combined_reject else 'ACCEPT H0'}"
+            f"     - Christoffersen Indep: LR={param_bt.christoffersen_stat:.3f} (p={param_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if param_bt.christoffersen_reject else 'ACCEPT H0'}"
         )
 
 
