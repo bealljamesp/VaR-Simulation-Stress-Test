@@ -59,3 +59,19 @@ def test_full_backtest_dataclass():
     assert result.total_observations == 500
     assert isinstance(result.empirical_rate, float)
     assert isinstance(result.kupiec_reject, bool)
+
+
+def test_monte_carlo_tensor_geometry():
+    from stress_engine.monte_carlo import run_comprehensive_stress_engine
+
+    # Run lightweight smoke simulation (100 paths, 10 days)
+    df_results, master_tensor = run_comprehensive_stress_engine(n_paths=100, n_days=10)
+
+    # 81 parameter nodes
+    assert len(df_results) == 81
+    assert master_tensor.shape == (81, 100, 10)
+    assert master_tensor.dtype == np.float32
+
+    # Drawdown probabilities must strictly live in [0.0, 1.0]
+    assert (df_results["Distress_Probability"] >= 0.0).all()
+    assert (df_results["Distress_Probability"] <= 1.0).all()
