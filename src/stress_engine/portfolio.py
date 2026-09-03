@@ -189,3 +189,34 @@ class PortfolioVaR:
             "param_pct": param_var,
             "param_dollar": param_var * self.initial_capital,
         }
+
+
+def run_ewma_out_of_sample_backtest(
+    self,
+    lookback_window: int = 252,
+    decay_factor: float = 0.94,
+) -> tuple[BacktestResult, npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Executes out-of-sample backtest using dynamic EWMA conditional volatility."""
+    from stress_engine.volatility import compute_ewma_volatility
+
+    if self.portfolio_returns is None:
+        self.run_analysis()
+
+    assert self.portfolio_returns is not None
+    sigma_series = compute_ewma_volatility(
+        self.portfolio_returns, decay_factor=decay_factor
+    )
+
+    # Shift conditional sigma by 1 to make it strictly out-of-sample: sigma_t forecasts r_t
+    forecast_sigma = sigma_series[lookback_window - 1 : -1]
+    realized_returns = self.portfolio_returns[lookback_window:]
+
+    z_score = float(stats.norm.ppf(self.confidence_level))
+    var_thresholds = -(z_score * forecast_sigma)
+
+    backtest = run_full_var_backtest(
+        returns=realized_returns,
+        var_thresholds=var_thresholds,
+        confidence_level=self.confidence_level,
+    )
+    return backtest, realized_returns, var_thresholds

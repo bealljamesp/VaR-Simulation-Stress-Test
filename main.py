@@ -74,6 +74,22 @@ def main() -> None:
             f"     - Christoffersen Indep: LR={param_bt.christoffersen_stat:.3f} (p={param_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if param_bt.christoffersen_reject else 'ACCEPT H0'}"
         )
 
+        # EWMA Dynamic Volatility Out-of-Sample Backtest
+        ewma_bt, _, _ = port.run_ewma_out_of_sample_backtest(
+            lookback_window=252, decay_factor=0.94
+        )
+
+        print("  3. Dynamic EWMA (RiskMetrics lambda=0.94):")
+        print(
+            f"     - Breaches:             {ewma_bt.total_exceptions} / {ewma_bt.total_observations} ({ewma_bt.empirical_rate * 100:.2f}%)"
+        )
+        print(
+            f"     - Kupiec POF:           LR={ewma_bt.kupiec_stat:.3f} (p={ewma_bt.kupiec_p_value:.4f}) -> {'REJECT H0' if ewma_bt.kupiec_reject else 'ACCEPT H0'}"
+        )
+        print(
+            f"     - Christoffersen Indep: LR={ewma_bt.christoffersen_stat:.3f} (p={ewma_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if ewma_bt.christoffersen_reject else 'ACCEPT H0'}"
+        )
+
 
 if __name__ == "__main__":
     main()
