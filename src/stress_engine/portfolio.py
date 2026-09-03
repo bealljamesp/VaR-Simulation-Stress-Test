@@ -10,7 +10,7 @@ from stress_engine.backtest import BacktestResult, run_full_var_backtest
 
 
 class PortfolioVaR:
-    """Multi-asset portfolio VaR calculator supporting Historical and Parametric methods."""
+    """Multi-asset portfolio VaR calculator supporting Historical, Parametric, and Rolling OOS methods."""
 
     def __init__(
         self,
@@ -78,7 +78,6 @@ class PortfolioVaR:
                 else self.market_data[["Close"]]
             )
 
-        # Enforce column order matches tickers list
         price_data = price_data.loc[:, self.tickers]
 
         if method == "log":
@@ -96,7 +95,6 @@ class PortfolioVaR:
         if self.returns is None or self.returns.empty:
             raise ValueError("Returns not computed. Call calculate_returns() first.")
 
-        # Zero-copy conversion guaranteed via .to_numpy()
         returns_mat: npt.NDArray[np.float64] = self.returns.to_numpy(
             dtype=np.float64, copy=False
         )
@@ -106,17 +104,16 @@ class PortfolioVaR:
         return self.portfolio_returns
 
     def calculate_historical_var(self) -> float:
-        """Calculates Historical VaR expressed as a positive loss percentage."""
+        """Calculates unconditional in-sample Historical VaR expressed as a positive loss percentage."""
         if self.portfolio_returns is None:
             raise ValueError("Portfolio returns not computed.")
 
         alpha = 1.0 - self.confidence_level
-        # The percentile cutoff is typically negative; we return positive loss magnitude
         loss_cutoff = float(np.percentile(self.portfolio_returns, alpha * 100))
         return max(0.0, -loss_cutoff)
 
     def calculate_parametric_var(self) -> float:
-        """Calculates Parametric (Variance-Covariance) VaR assuming normal distribution."""
+        """Calculates unconditional in-sample Parametric VaR assuming normal distribution."""
         if self.portfolio_returns is None:
             raise ValueError("Portfolio returns not computed.")
 
@@ -124,25 +121,56 @@ class PortfolioVaR:
         sigma = float(np.std(self.portfolio_returns, ddof=1))
         z_score = float(stats.norm.ppf(self.confidence_level))
 
-        # VaR = z * sigma - mu (positive loss percentage)
         var_pct = (z_score * sigma) - mu
         return max(0.0, var_pct)
 
-    def run_backtest(self) -> BacktestResult:
-        """Runs Kupiec and Christoffersen backtests against the modeled Historical VaR cutoff."""
+    def run_rolling_out_of_sample_backtest(
+        self,
+        lookback_window: int = 252,
+        method: str = "historical",
+    ) -> tuple[BacktestResult, npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Executes a fully vectorized, out-of-sample dynamic VaR backtest using sliding strided views."""
         if self.portfolio_returns is None:
             self.run_analysis()
 
         assert self.portfolio_returns is not None
-        hist_var_loss = self.calculate_historical_var()
-        # Loss cutoff as a negative threshold to compare against daily returns
-        cutoff_threshold = -hist_var_loss
+        total_obs = self.portfolio_returns.size
 
-        return run_full_var_backtest(
-            returns=self.portfolio_returns,
-            var_thresholds=cutoff_threshold,
+        if total_obs <= lookback_window:
+            raise ValueError(
+                f"Total observations ({total_obs}) must exceed lookback window ({lookback_window})."
+            )
+
+        # Extract pre-realization training slices via O(1) strided window: (T - W, W)
+        training_windows = np.lib.stride_tricks.sliding_window_view(
+            self.portfolio_returns[:-1], window_shape=lookback_window
+        )
+        # Out-of-sample realized returns: vector of length T - W
+        realized_returns = self.portfolio_returns[lookback_window:]
+
+        alpha = 1.0 - self.confidence_level
+
+        if method == "historical":
+            # Vectorized percentile computation along lookback axis (axis 1)
+            var_thresholds = np.percentile(training_windows, alpha * 100.0, axis=1)
+        elif method == "parametric":
+            # Vectorized mean and standard deviation along lookback axis
+            mu = np.mean(training_windows, axis=1)
+            sigma = np.std(training_windows, axis=1, ddof=1)
+            z_score = float(stats.norm.ppf(self.confidence_level))
+            # Loss cutoff threshold in return space (negative value)
+            var_thresholds = mu - (z_score * sigma)
+        else:
+            raise ValueError("Method must be 'historical' or 'parametric'.")
+
+        # Run Kupiec & Christoffersen against realized out-of-sample series
+        backtest = run_full_var_backtest(
+            returns=realized_returns,
+            var_thresholds=var_thresholds,
             confidence_level=self.confidence_level,
         )
+
+        return backtest, realized_returns, var_thresholds
 
     def run_analysis(self) -> dict[str, float | str]:
         """Executes the pipeline and returns a summary dictionary of metrics."""
