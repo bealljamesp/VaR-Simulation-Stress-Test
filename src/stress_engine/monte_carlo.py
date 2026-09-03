@@ -103,23 +103,20 @@ def run_comprehensive_stress_engine(
 
     df_results = pd.DataFrame(records)
 
-    # Save artifacts back to data/raw/
-    output_dir = Path("../data/raw")
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    PROJECT_ROOT = Path(__file__).resolve().parents[2]
-    output_dir = PROJECT_ROOT / "data" / "raw"
+    # Deterministic path resolution anchored to project root
+    project_root = Path(__file__).resolve().parents[2]
+    output_dir = project_root / "data" / "raw"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     df_output_path = output_dir / "synthetic_4d_monte_carlo_results.parquet"
     tensor_output_path = output_dir / "master_path_tensor.npy"
 
-    df_results.to_parquet(df_output_path)
+    df_results.to_parquet(df_output_path, index=False)
     np.save(tensor_output_path, master_path_tensor)
 
     print(
-        f"Simulation complete in {time.time() - start_time:.2f}s. Saved summary to "
-        f"{df_output_path} and full tensor shape {master_path_tensor.shape} to {tensor_output_path}"
+        f"Simulation complete in {time.time() - start_time:.2f}s. "
+        f"Saved summary to {df_output_path} and tensor {master_path_tensor.shape} to {tensor_output_path}"
     )
     return df_results, master_path_tensor
 
