@@ -180,14 +180,20 @@ class PortfolioVaR:
 
         hist_var = self.calculate_historical_var()
         param_var = self.calculate_parametric_var()
+        hist_es = self.calculate_historical_expected_shortfall()
+        param_es = self.calculate_parametric_expected_shortfall()
 
         return {
             "name": self.name,
             "period": f"{self.start_date} to {self.end_date}",
             "hist_pct": hist_var,
             "hist_dollar": hist_var * self.initial_capital,
+            "hist_es_pct": hist_es,
+            "hist_es_dollar": hist_es * self.initial_capital,
             "param_pct": param_var,
             "param_dollar": param_var * self.initial_capital,
+            "param_es_pct": param_es,
+            "param_es_dollar": param_es * self.initial_capital,
         }
 
     def run_ewma_out_of_sample_backtest(
@@ -289,3 +295,31 @@ class PortfolioVaR:
             confidence_level=self.confidence_level,
         )
         return backtest, realized_returns, var_thresholds
+
+def calculate_historical_expected_shortfall(self) -> float:
+        """Calculates in-sample Historical Expected Shortfall (CVaR) as a positive loss percentage."""
+        if self.portfolio_returns is None:
+            raise ValueError("Portfolio returns not computed.")
+
+        alpha = 1.0 - self.confidence_level
+        loss_cutoff = float(np.percentile(self.portfolio_returns, alpha * 100.0))
+        breaches = self.portfolio_returns[self.portfolio_returns < loss_cutoff]
+
+        if breaches.size == 0:
+            return max(0.0, -loss_cutoff)
+
+        return float(np.mean(-breaches))
+
+    def calculate_parametric_expected_shortfall(self) -> float:
+        """Calculates Parametric Expected Shortfall (CVaR) assuming normal distribution."""
+        if self.portfolio_returns is None:
+            raise ValueError("Portfolio returns not computed.")
+
+        mu = float(np.mean(self.portfolio_returns))
+        sigma = float(np.std(self.portfolio_returns, ddof=1))
+        alpha = 1.0 - self.confidence_level
+
+        # ES = -mu + sigma * (phi(Phi^-1(alpha)) / alpha)
+        z_cutoff = stats.norm.ppf(alpha)
+        es_loss = -mu + sigma * (stats.norm.pdf(z_cutoff) / alpha)
+        return max(0.0, float(es_loss))
