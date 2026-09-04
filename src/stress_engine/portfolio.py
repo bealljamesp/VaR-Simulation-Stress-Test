@@ -296,7 +296,7 @@ class PortfolioVaR:
         )
         return backtest, realized_returns, var_thresholds
 
-def calculate_historical_expected_shortfall(self) -> float:
+    def calculate_historical_expected_shortfall(self) -> float:
         """Calculates in-sample Historical Expected Shortfall (CVaR) as a positive loss percentage."""
         if self.portfolio_returns is None:
             raise ValueError("Portfolio returns not computed.")
