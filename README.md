@@ -52,9 +52,12 @@ VaR-Simulation-Stress-Test/
 └── research/
     └── archive/                       # Deprecated scratchpads & experiments
 ```
+
+---
+
 ## Mathematical Specification
 
-### Dynamic Conditional Volatility
+* Dynamic Conditional Volatility
 
 RiskMetrics EWMA Filter
 
@@ -104,6 +107,8 @@ $$LR_{\text{cc}} = LR_{\text{uc}} + LR_{\text{ind}} \sim \chi^2(2)$$
 
 $$\text{ES}_\alpha = \mathbb{E}\left[ -r_t \mid -r_t > \text{VaR}_\alpha \right]$$
 
+---
+
 ## Empirical Benchmark Findings (2008 Crisis Stress Horizon)
 
 Tested across N = 502 out-of-sample trading days (W = 252 lookback window) during the 2007–2009 Global Financial Crisis at 95% confidence level (p = 0.05, Target Breaches = 25.1):
@@ -127,6 +132,8 @@ The In-Sample Quantile Fallacy: In-sample static historical simulation guarantee
 Dynamic Volatility Responsiveness: Unweighted rolling windows lag violent market shifts. Dynamic EWMA and GJR-GARCH rapidly scale conditional variance upward, mitigating breach clustering during systemic market panics.
 
 Distributional Breakdown in Multi-Asset Portfolios: Standard GJR-GARCH under normal innovations failed on multi-asset portfolios (7.77% breach rate, p = 0.0082) due to tail thinness. Filtered Historical Simulation resolved the failure (5.98% breach rate, p = 0.3296) by combining GJR-GARCH variance scaling with empirical innovation tails.
+
+---
 
 ## 4D Tensor Monte Carlo Simulation Architecture
 
@@ -154,11 +161,15 @@ $$\mathbf{S}_{k, p, t} = 100 \cdot \exp\left( \sum_{\tau=1}^t \mathbf{R}_{k, p, 
 
 $$\mathbf{MDD}_{k, p} = \min_{t \in [1, T]} \left( \frac{\mathbf{S}_{k, p, t} - \max_{\tau \le t} \mathbf{S}_{k, p, \tau}}{\max_{\tau \le t} \mathbf{S}_{k, p, \tau}} \right)$$
 
+---
+
 ## Diagnostic Figures
 
 ArtifactPathDescriptionVaR Backtest Diagnosticsdata/plots/var_diagnostics_*.pngTime-series overlay of daily returns, time-varying VaR boundary bands, and exception breach clusters.4D Stress Surface Matrixdata/plots/stress_matrix_4d_surface.pngFaceted categorical surface contrasting shock severity vs. distress probability ($DD \le -40\%$).
 
 The visualization pipeline produces publication-quality figures formatted with matplotlib and seaborn:
+
+---
 
 ## Getting Started
 
