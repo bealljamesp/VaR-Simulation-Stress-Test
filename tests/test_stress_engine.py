@@ -1,6 +1,7 @@
-"""Unit tests for stress engine mathematical components."""
+"""Comprehensive mathematical and behavioral unit test suite for stress_engine."""
 
 import numpy as np
+import pytest
 
 from stress_engine.backtest import (
     calculate_var_exceptions,
@@ -8,9 +9,16 @@ from stress_engine.backtest import (
     kupiec_pof_test,
     run_full_var_backtest,
 )
+from stress_engine.monte_carlo import run_comprehensive_stress_engine
+from stress_engine.portfolio import PortfolioVaR
+from stress_engine.volatility import compute_ewma_volatility, fit_gjr_garch
+
+# =====================================================================
+# 1. REGULATORY BACKTESTING INVARIANTS (KUPIEC & CHRISTOFFERSEN)
+# =====================================================================
 
 
-def test_calculate_var_exceptions():
+def test_calculate_var_exceptions_boundary() -> None:
     returns = np.array([-0.05, -0.01, 0.02, -0.04, 0.01], dtype=np.float64)
     var = -0.03
     exceptions = calculate_var_exceptions(returns, var)
@@ -18,7 +26,7 @@ def test_calculate_var_exceptions():
     assert np.array_equal(exceptions, expected)
 
 
-def test_kupiec_perfect_calibration():
+def test_kupiec_perfect_calibration() -> None:
     # 1,000 observations with exactly 50 breaches (5.0% empirical on 95% VaR)
     exceptions = np.zeros(1000, dtype=np.bool_)
     exceptions[:50] = True
@@ -29,7 +37,7 @@ def test_kupiec_perfect_calibration():
     assert not reject
 
 
-def test_kupiec_severe_underestimation():
+def test_kupiec_severe_underestimation() -> None:
     # 1,000 observations with 150 breaches (15% empirical on 95% VaR)
     exceptions = np.zeros(1000, dtype=np.bool_)
     exceptions[:150] = True
@@ -40,38 +48,142 @@ def test_kupiec_severe_underestimation():
     assert reject
 
 
-def test_christoffersen_independence_clustering():
+def test_christoffersen_independence_clustering() -> None:
     # Heavy clustering: all 10 exceptions occur sequentially
     exceptions = np.zeros(200, dtype=np.bool_)
     exceptions[50:60] = True
 
     stat, p_val, reject = christoffersen_independence_test(exceptions)
-    assert stat > 3.841  # Chi-squared critical value for df=1 at 95%
+    assert stat > 3.841  # Chi-squared critical threshold at alpha=0.05, df=1
     assert p_val < 0.05
     assert reject
 
 
-def test_full_backtest_dataclass():
-    returns = np.random.default_rng(42).normal(0.0, 0.01, size=500)
+def test_christoffersen_zero_exceptions_boundary() -> None:
+    # Zero exceptions across observation horizon: cannot reject independence
+    exceptions = np.zeros(250, dtype=np.bool_)
+    stat, p_val, reject = christoffersen_independence_test(exceptions)
+    assert stat == 0.0
+    assert p_val == 1.0
+    assert not reject
+
+
+def test_full_backtest_dataclass_contract() -> None:
+    rng = np.random.default_rng(42)
+    returns = rng.normal(0.0, 0.01, size=500)
     var = -0.02
     result = run_full_var_backtest(returns, var, confidence_level=0.95)
 
     assert result.total_observations == 500
-    assert isinstance(result.empirical_rate, float)
+    assert 0.0 <= result.empirical_rate <= 1.0
     assert isinstance(result.kupiec_reject, bool)
+    assert isinstance(result.christoffersen_reject, bool)
+    assert isinstance(result.combined_reject, bool)
 
 
-def test_monte_carlo_tensor_geometry():
-    from stress_engine.monte_carlo import run_comprehensive_stress_engine
+# =====================================================================
+# 2. DYNAMIC VOLATILITY ENGINES (EWMA & GJR-GARCH)
+# =====================================================================
 
-    # Run lightweight smoke simulation (100 paths, 10 days)
+
+def test_ewma_monotonic_decay_under_zero_shock() -> None:
+    # A single shock followed by a zero-return regime must decay exponentially
+    returns = np.zeros(100, dtype=np.float64)
+    returns[0] = 0.10  # Initial 10% shock
+
+    vol = compute_ewma_volatility(returns, decay_factor=0.94, initial_variance=0.01)
+
+    # From t=2 onward (where r_{t-1}=0), variance = lambda * variance_{t-1}
+    # Therefore, consecutive conditional sigma must be strictly decreasing
+    diffs = np.diff(vol[2:])
+    assert (diffs < 0.0).all()
+
+
+def test_ewma_output_shape_and_positivity() -> None:
+    rng = np.random.default_rng(42)
+    returns = rng.normal(0.0, 0.02, size=300)
+    vol = compute_ewma_volatility(returns, decay_factor=0.94)
+
+    assert vol.shape == (300,)
+    assert (vol > 0.0).all()
+
+
+def test_gjr_garch_stationarity_and_parameter_bounds() -> None:
+    rng = np.random.default_rng(42)
+    # Generate synthetic stationary fat-tailed returns
+    synthetic_returns = rng.standard_t(df=5.0, size=1000) * 0.015
+
+    params, cond_sigma = fit_gjr_garch(synthetic_returns)
+
+    # Positivity bounds
+    assert params.omega > 0.0
+    assert params.alpha >= 0.0
+    assert params.gamma >= 0.0
+    assert params.beta >= 0.0
+
+    # Stationarity requirement: alpha + beta + 0.5 * gamma < 1.0
+    assert params.persistence < 1.0
+    assert len(cond_sigma) == len(synthetic_returns)
+    assert (cond_sigma > 0.0).all()
+
+
+# =====================================================================
+# 3. 4D TENSOR MONTE CARLO INVARIANTS
+# =====================================================================
+
+
+def test_monte_carlo_tensor_geometry_and_bounds() -> None:
+    # Lightweight smoke run: 100 paths, 10 days
     df_results, master_tensor = run_comprehensive_stress_engine(n_paths=100, n_days=10)
 
-    # 81 parameter nodes
+    # Assert Cartesian grid geometry: 3 x 3 x 3 x 3 = 81 nodes
     assert len(df_results) == 81
     assert master_tensor.shape == (81, 100, 10)
     assert master_tensor.dtype == np.float32
 
-    # Drawdown probabilities must strictly live in [0.0, 1.0]
+    # Drawdown probabilities must be bounded strictly within [0.0, 1.0]
     assert (df_results["Distress_Probability"] >= 0.0).all()
     assert (df_results["Distress_Probability"] <= 1.0).all()
+
+    # Drawdown metrics must be negative or zero (peak-to-trough)
+    assert (df_results["Mean_Max_DD"] <= 0.0).all()
+    assert (df_results["P95_Max_DD"] <= 0.0).all()
+
+
+# =====================================================================
+# 4. PORTFOLIO ENGINE CONTRACTS & INPUT VALIDATION
+# =====================================================================
+
+
+def test_portfolio_weight_dimension_mismatch() -> None:
+    with pytest.raises(ValueError, match="Dimension mismatch"):
+        PortfolioVaR(
+            name="Mismatch Port",
+            tickers=["AAPL", "MSFT"],
+            weights=[0.5, 0.3, 0.2],  # 2 assets, 3 weights
+            start_date="2020-01-01",
+            end_date="2021-01-01",
+        )
+
+
+def test_portfolio_weights_not_summing_to_one() -> None:
+    with pytest.raises(ValueError, match="must sum to 1.0"):
+        PortfolioVaR(
+            name="Unnormalized Port",
+            tickers=["AAPL", "MSFT"],
+            weights=[0.5, 0.4],  # Sum = 0.9
+            start_date="2020-01-01",
+            end_date="2021-01-01",
+        )
+
+
+def test_portfolio_lookback_exceeding_data_length() -> None:
+    port = PortfolioVaR(
+        name="Short Horizon",
+        tickers=["SPY"],
+        weights=[1.0],
+        start_date="2020-01-01",
+        end_date="2020-02-01",  # ~21 trading days
+    )
+    with pytest.raises(ValueError, match="must exceed lookback window"):
+        port.run_rolling_out_of_sample_backtest(lookback_window=252)

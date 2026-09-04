@@ -168,3 +168,81 @@ def run_full_var_backtest(
         combined_p_value=p_cc,
         combined_reject=rej_cc,
     )
+
+
+# Basel traffic light evaluation functions and dataclasses for regulatory capital multipliers based on VaR backtesting results.
+
+from dataclasses import dataclass
+from enum import StrEnum
+
+
+class BaselZone(StrEnum):
+    GREEN = "GREEN"
+    YELLOW = "YELLOW"
+    RED = "RED"
+
+
+@dataclass(frozen=True, slots=True)
+class BaselTrafficLightResult:
+    total_observations: int
+    exceptions: int
+    zone: BaselZone
+    capital_multiplier: float
+    cumulative_probability: float
+
+
+def compute_expected_shortfall(
+    returns: npt.NDArray[np.float64],
+    var_threshold: float,
+) -> float:
+    """Calculates empirical Expected Shortfall (CVaR) as a positive loss percentage
+
+    given a negative return VaR threshold (losses beyond cutoff).
+    """
+    returns_arr = np.ascontiguousarray(returns, dtype=np.float64)
+    # Mask breaches: returns that fall below negative cutoff
+    breaches = returns_arr[returns_arr < var_threshold]
+
+    if breaches.size == 0:
+        # If no breaches occurred, ES defaults to the VaR threshold magnitude
+        return max(0.0, -var_threshold)
+
+    # Return positive mean loss magnitude
+    return float(np.mean(-breaches))
+
+
+def evaluate_basel_traffic_light(
+    exceptions: int,
+    total_observations: int = 250,
+    confidence_level: float = 0.99,
+) -> BaselTrafficLightResult:
+    """Classifies a model into the BCBS Basel Traffic Light zones (Green, Yellow, Red)
+
+    using the binomial cumulative density function at 99% 1-day VaR.
+    """
+    p = 1.0 - confidence_level
+    cum_prob = float(stats.binom.cdf(exceptions, total_observations, p))
+
+    # BCBS standard boundaries for N=250 at 99% VaR:
+    # 0-4 breaches: Green (multiplier = 3.00)
+    # 5-9 breaches: Yellow (multiplier = 3.40 to 3.85)
+    # 10+ breaches: Red (multiplier = 4.00)
+    if exceptions <= 4:
+        zone = BaselZone.GREEN
+        multiplier = 3.00
+    elif exceptions <= 9:
+        zone = BaselZone.YELLOW
+        # Graduated penalty scaling between 3.40 and 3.85
+        penalties = {5: 3.40, 6: 3.50, 7: 3.65, 8: 3.75, 9: 3.85}
+        multiplier = penalties.get(exceptions, 3.85)
+    else:
+        zone = BaselZone.RED
+        multiplier = 4.00
+
+    return BaselTrafficLightResult(
+        total_observations=total_observations,
+        exceptions=exceptions,
+        zone=zone,
+        capital_multiplier=multiplier,
+        cumulative_probability=cum_prob,
+    )
