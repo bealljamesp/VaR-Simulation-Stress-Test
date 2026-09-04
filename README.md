@@ -56,23 +56,23 @@ VaR-Simulation-Stress-Test/
 
 ### Dynamic Conditional Volatility
 
-#### RiskMetrics EWMA Filter
+RiskMetrics EWMA Filter
 
 $$\sigma_t^2 = \lambda \sigma_{t-1}^2 + (1 - \lambda) r_{t-1}^2 \quad (\lambda = 0.94)$$
 
-#### Asymmetric GJR-GARCH(1,1)
+Asymmetric GJR-GARCH(1,1)
 
 $$\sigma_t^2 = \omega + \left( \alpha + \gamma \cdot \mathbb{I}_{\{r_{t-1} < 0\}} \right) r_{t-1}^2 + \beta \sigma_{t-1}^2$$
 
-#### Subject to parameter constraints:
+Subject to parameter constraints:
 
 $$\omega > 0, \quad \alpha \ge 0, \quad \gamma \ge 0, \quad \beta \ge 0, \quad \alpha + \beta + 0.5\gamma < 1.0$$
 
-#### Filtered Historical Simulation (FHS)Standardized innovations are filtered from conditional volatility:
+Filtered Historical Simulation (FHS)Standardized innovations are filtered from conditional volatility:
 
 $$z_t = \frac{r_t}{\sigma_t}$$
 
-#### The dynamic out-of-sample loss cutoff is computed via the empirical quantile of historical residuals:
+The dynamic out-of-sample loss cutoff is computed via the empirical quantile of historical residuals:
 
 $$\text{VaR}_t^{\text{FHS}}(\alpha) = \text{Quantile}_\alpha(\{z_\tau\}_{\tau=t-W}^{t-1}) \cdot \sigma_t$$
 
@@ -128,7 +128,7 @@ Dynamic Volatility Responsiveness: Unweighted rolling windows lag violent market
 
 Distributional Breakdown in Multi-Asset Portfolios: Standard GJR-GARCH under normal innovations failed on multi-asset portfolios (7.77% breach rate, p = 0.0082) due to tail thinness. Filtered Historical Simulation resolved the failure (5.98% breach rate, p = 0.3296) by combining GJR-GARCH variance scaling with empirical innovation tails.
 
-4D Tensor Monte Carlo Simulation Architecture
+## 4D Tensor Monte Carlo Simulation Architecture
 
 The macroeconomic stress module simulates an 81-node Cartesian parameter space across:
 
@@ -154,16 +154,16 @@ $$\mathbf{S}_{k, p, t} = 100 \cdot \exp\left( \sum_{\tau=1}^t \mathbf{R}_{k, p, 
 
 $$\mathbf{MDD}_{k, p} = \min_{t \in [1, T]} \left( \frac{\mathbf{S}_{k, p, t} - \max_{\tau \le t} \mathbf{S}_{k, p, \tau}}{\max_{\tau \le t} \mathbf{S}_{k, p, \tau}} \right)$$
 
-Diagnostic Figures
+## Diagnostic Figures
 
 ArtifactPathDescriptionVaR Backtest Diagnosticsdata/plots/var_diagnostics_*.pngTime-series overlay of daily returns, time-varying VaR boundary bands, and exception breach clusters.4D Stress Surface Matrixdata/plots/stress_matrix_4d_surface.pngFaceted categorical surface contrasting shock severity vs. distress probability ($DD \le -40\%$).
 
 The visualization pipeline produces publication-quality figures formatted with matplotlib and seaborn:
 
-Getting Started
+## Getting Started
 
-1. Environment Setup
-
+### Environment Setup
+```
 # Clone the repository
 git clone [https://github.com/your-username/VaR-Simulation-Stress-Test.git](https://github.com/your-username/VaR-Simulation-Stress-Test.git)
 cd VaR-Simulation-Stress-Test
@@ -176,7 +176,7 @@ conda activate var-simulation
 conda install pytest -y
 pip install -e .
 ```
-2. Execution
+### Execution
 Run the complete econometric analysis, backtesting suite, tensor simulation, and visualization generator:
 ```
 python main.py
@@ -185,31 +185,32 @@ To run the standalone 4D Monte Carlo tensor stress simulation:
 ```
 python src/stress_engine/monte_carlo.py
 ```
-3. Verification
+### Verification
 Execute the test suite verifying all 15 mathematical and behavioral invariants:
 ```
 pytest -v
 ```
-Technical Invariants Tested
+## Technical Invariants Tested
+
 The test suite in tests/test_stress_engine.py asserts 15 mechanical and mathematical guarantees:
 
-Kupiec POF Bounds: Verifies statistical non-rejection under perfect calibration (50 / 1000 breaches) and deterministic rejection under severe underestimation (150 / 1000 breaches).
+-Kupiec POF Bounds: Verifies statistical non-rejection under perfect calibration (50 / 1000 breaches) and deterministic rejection under severe underestimation (150 / 1000 breaches).
 
-Christoffersen Markov Transitions: Verifies clustering detection (p < 0.05) on sequential exceptions and graceful handling of zero-exception boundary states.
+-Christoffersen Markov Transitions: Verifies clustering detection (p < 0.05) on sequential exceptions and graceful handling of zero-exception boundary states.
 
-EWMA Monotonic Decay: Enforces that conditional variance strictly decreases across consecutive zero-return periods following an initial shock.
+-EWMA Monotonic Decay: Enforces that conditional variance strictly decreases across consecutive zero-return periods following an initial shock.
 
-GJR-GARCH Stationarity: Validates non-negativity bounds (ω, α, γ, β > 0) and verifies the stationarity constraint (α + β + 0.5γ < 1.0).
+-GJR-GARCH Stationarity: Validates non-negativity bounds (ω, α, γ, β > 0) and verifies the stationarity constraint (α + β + 0.5γ < 1.0).
 
-Expected Shortfall Coherence: Asserts the subadditivity and severity invariant where Expected Shortfall strictly exceeds Value-at-Risk (ES > VaR) on non-degenerate distributions.
+-Expected Shortfall Coherence: Asserts the subadditivity and severity invariant where Expected Shortfall strictly exceeds Value-at-Risk (ES > VaR) on non-degenerate distributions.
 
-BCBS Basel III Boundaries: Confirms exact regulatory traffic light zone assignments (Green: 0–4 breaches, Yellow: 5–9 breaches, Red: 10+ breaches) and corresponding capital multiplier penalties (3.00 to 4.00).
+-BCBS Basel III Boundaries: Confirms exact regulatory traffic light zone assignments (Green: 0–4 breaches, Yellow: 5–9 breaches, Red: 10+ breaches) and corresponding capital multiplier penalties (3.00 to 4.00).
 
-Tensor Geometry: Enforces valid probability bounds [0.0, 1.0], negative peak-to-trough drawdowns, and strict shape preservation across the (81, 5000, 90) float32 state space.
+-Tensor Geometry: Enforces valid probability bounds [0.0, 1.0], negative peak-to-trough drawdowns, and strict shape preservation across the (81, 5000, 90) float32 state space.
 
 Author
 James Beall
 
-M.S. Applied Business Analytics | B.S. Theoretical Mathematics (UCSB)
+M.S. Applied Business Analytics | B.S. Theoretical Mathematics
 
 Quantitative Risk Management & Quantitative Finance Portfolio Project
