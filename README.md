@@ -1,38 +1,53 @@
-# Quantitative Risk & Econometrics: VaR Simulation Stress Test
+# Quantitative Risk & Liquidity Stress Testing Engine (`stress_engine`)
 
-[![CI Test Suite](https://github.com/bealljamesp/anomaly-detection-engine/actions/workflows/tests.yml/badge.svg)](https://github.com/bealljamesp/anomaly-detection-engine/actions/workflows/tests.yml)
-![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/pytest-15%20passed-brightgreen.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code Style](https://img.shields.io/badge/typing-PEP%20585%20%7C%20604%20%7C%20646-informational.svg)]()
 
-An institutional-grade market risk analytics and Monte Carlo stress-testing engine built in Python. This framework evaluates the systemic underestimation of traditional parametric (Gaussian) and historical Value at Risk (VaR) models during macroeconomic shocks, isolating true structural risk factors from historical coincidences.
+A high-performance quantitative risk and liquidity stress-testing engine developed to institutional risk standards (Basel Committee on Banking Supervision / FRM Part 1).
 
----
-
-## 🎯 Overview & Objectives
-
-Traditional linear risk models (e.g., standard normal parametric VaR) notoriously fail during severe regime shifts because they assume Gaussian asset return distributions and stable cross-asset correlations. This repository implements a two-stage hybrid quantitative methodology:
-
-1. **Empirical Historical Crisis Analysis:** Backtests multi-asset portfolios through real-world market crashes (2008 Global Financial Crisis, 2020 COVID Shock, and 2022 Rate Hike Cycle) to quantify VaR breach magnitudes, tail kurtosis, and correlation breakdown.
-2. **Stochastic Monte Carlo Simulation Engine:** Generates $10,000+$ synthetic market shock scenarios across non-Gaussian distributions (Student's $t$-distribution, GARCH dynamic volatility, dynamic copula correlations) to test whether identified risk variables act as true structural drivers or mere historical artifacts.
+The platform evaluates historical asset and portfolio drawdowns, calculates dynamic conditional Value-at-Risk (VaR) and Expected Shortfall (ES), runs formal econometric regulatory backtests, and conducts vectorized Monte Carlo macroeconomic stress simulations across a 4D parametric state space ($36.45\text{M}$ path coordinates in $<3.0\text{s}$).
 
 ---
 
-## 📐 Key Risk Metrics & Methodologies
+## Key Econometric & Engineering Features
 
-* **Risk Metrics Evaluated:**
-  * Parametric VaR (Normal vs. Heavy-Tailed Student's $t$)
-  * Historical Simulation VaR
-  * GARCH(1,1)-Filtered Volatility & Dynamic Conditional Correlation (DCC)
-  * Expected Shortfall (ES / Tail VaR)
-* **Statistical Backtesting:**
-  * Kupiec Proportion of Failures (POF) Test
-  * Christoffersen Interval Independence Test
-  * VaR Exceedance Ratios ($\frac{\text{Actual Loss}}{\text{Estimated VaR}}$)
+* **Anti-Loop Mandate & Tensor Vectorization:** Zero iterative loops for mathematical transformations, portfolio combinations, simulation paths, or rolling windows. Employs SIMD-aligned C-contiguous memory structures via NumPy and SciPy.
+* **Rolling Dynamic Strided Windows ($O(1)$ Allocation):** Leverages `numpy.lib.stride_tricks.sliding_window_view` to construct out-of-sample training/evaluation matrices without memory duplication.
+* **Dynamic Conditional Volatility Engines:**
+  * **RiskMetrics EWMA ($\lambda=0.94$):** Exponentially decaying memory footprint.
+  * **GJR-GARCH(1,1):** Asymmetric leverage estimation via constrained Sequential Least Squares Programming (SLSQP) Maximum Likelihood Estimation (MLE).
+  * **Filtered Historical Simulation (FHS):** Non-parametric standardization using empirical standardized innovations $z_t = r_t / \sigma_t$.
+* **Regulatory Backtesting Suite:**
+  * **Kupiec Proportion of Failures (POF) Test ($LR_{\text{uc}}$):** Unconditional coverage testing.
+  * **Christoffersen Markov Independence Test ($LR_{\text{ind}}$):** Exception clustering and first-order Markov transition likelihood ratio testing.
+  * **Christoffersen Combined Conditional Coverage ($LR_{\text{cc}}$):** Joint evaluation against $\chi^2(2)$.
+  * **Basel Committee (BCBS) Traffic Light System:** Exact binomial cumulative density classification into Green, Yellow, and Red capital penalty zones.
+* **Modern Python 3.12+ Standards:** Strict type annotations via `numpy.typing.NDArray[np.float64]`, modern type unions (`|`), explicit axis selections, zero-copy `.to_numpy(dtype=np.float64, copy=False)` operations, and clean `src/` layout installation.
 
 ---
 
-## 🛠️ Data Sources & Architecture
+## System Architecture
 
-* **Market & Macro Data:** Yahoo Finance API (`yfinance`) and Federal Reserve Economic Data (`FRED API`).
-* **Technology Stack:** Python (`numpy`, `pandas`, `scipy`, `statsmodels`, `arch`, `matplotlib`, `seaborn`).
-* **Design Pattern:** Modular, object-oriented pipeline designed for automated data ingestion, backtesting, stochastic path generation, and risk report generation.
+```text
+VaR-Simulation-Stress-Test/
+├── pyproject.toml                     # PEP 517/518 build specification
+├── main.py                            # End-to-end execution pipeline
+├── src/
+│   └── stress_engine/
+│       ├── __init__.py                # Package initialization & exports
+│       ├── backtest.py                # Kupiec, Christoffersen, & Basel III engines
+│       ├── ingestion.py               # Vectorized HTML/distressed patch parsing
+│       ├── monte_carlo.py             # 4D tensor stress testing engine
+│       ├── portfolio.py               # PortfolioVaR, rolling OOS, & FHS engines
+│       ├── visualization.py           # Publication-grade diagnostic charting
+│       └── volatility.py              # EWMA and GJR-GARCH(1,1) MLE solvers
+├── tests/
+│   └── test_stress_engine.py          # 15 mathematical & structural invariants
+├── data/
+│   ├── patches/                       # Standardized CSV patches
+│   ├── plots/                         # 300 DPI exported diagnostics
+│   └── raw/                           # Parquet metrics & master numpy tensors
+└── research/
+    └── archive/                       # Deprecated scratchpads & experiments
