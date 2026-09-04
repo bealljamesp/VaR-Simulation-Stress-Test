@@ -117,6 +117,20 @@ def main() -> None:
         print(
             f"     - Christoffersen Indep: LR={fhs_bt.christoffersen_stat:.3f} (p={fhs_bt.christoffersen_p_value:.4f}) -> {'REJECT H0' if fhs_bt.christoffersen_reject else 'ACCEPT H0'}"
         )
+        # Generate Publication-Grade Diagnostic Charts
+        from stress_engine.visualization import plot_var_backtest_diagnostics
+
+        clean_name = port.name.split(" - ")[-1].lower().replace(" ", "_")
+        plot_var_backtest_diagnostics(
+            portfolio=port,
+            lookback_window=252,
+            output_filename=f"var_diagnostics_{clean_name}.png",
+        )
+
+    # Generate 4D Monte Carlo Drawdown Surface Chart
+    from stress_engine.visualization import plot_monte_carlo_drawdown_surface
+
+    plot_monte_carlo_drawdown_surface()
 
 
 if __name__ == "__main__":
