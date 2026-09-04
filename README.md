@@ -52,11 +52,11 @@ VaR-Simulation-Stress-Test/
 └── research/
     └── archive/                       # Deprecated scratchpads & experiments
 ```
-### Mathematical Specification
+## Mathematical Specification
 
-1. Dynamic Conditional Volatility
+### Dynamic Conditional Volatility
 
-  RiskMetrics EWMA Filter
+#### RiskMetrics EWMA Filter
 
 $$\sigma_t^2 = \lambda \sigma_{t-1}^2 + (1 - \lambda) r_{t-1}^2 \quad (\lambda = 0.94)$$
 
