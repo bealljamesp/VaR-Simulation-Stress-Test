@@ -187,3 +187,40 @@ def test_portfolio_lookback_exceeding_data_length() -> None:
     )
     with pytest.raises(ValueError, match="must exceed lookback window"):
         port.run_rolling_out_of_sample_backtest(lookback_window=252)
+
+
+from stress_engine.backtest import (
+    BaselZone,
+    compute_expected_shortfall,
+    evaluate_basel_traffic_light,
+)
+
+
+def test_expected_shortfall_strictly_exceeds_var() -> None:
+    # Coherence invariant: Expected Shortfall must be >= VaR for non-degenerate tail
+    rng = np.random.default_rng(42)
+    returns = rng.standard_t(df=4.0, size=1000) * 0.02
+    var_cutoff = float(np.percentile(returns, 5.0))  # 95% cutoff (negative)
+
+    es = compute_expected_shortfall(returns, var_cutoff)
+    var_mag = -var_cutoff
+
+    assert es > var_mag
+
+
+def test_basel_traffic_light_regulatory_boundaries() -> None:
+    # 250 observations at 99% VaR:
+    # Green zone: 0 to 4
+    green = evaluate_basel_traffic_light(exceptions=3, total_observations=250)
+    assert green.zone == BaselZone.GREEN
+    assert green.capital_multiplier == 3.00
+
+    # Yellow zone: 5 to 9
+    yellow = evaluate_basel_traffic_light(exceptions=6, total_observations=250)
+    assert yellow.zone == BaselZone.YELLOW
+    assert yellow.capital_multiplier == 3.50
+
+    # Red zone: >= 10
+    red = evaluate_basel_traffic_light(exceptions=11, total_observations=250)
+    assert red.zone == BaselZone.RED
+    assert red.capital_multiplier == 4.00
