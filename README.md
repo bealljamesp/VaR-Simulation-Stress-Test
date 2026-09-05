@@ -57,7 +57,7 @@ VaR-Simulation-Stress-Test/
 
 ## Mathematical Specification
 
-1. Dynamic Conditional Volatility
+Dynamic Conditional Volatility
 
 * RiskMetrics EWMA Filter
 
@@ -79,7 +79,7 @@ $$z_t = \frac{r_t}{\sigma_t}$$
 
 $$\text{VaR}_t^{\text{FHS}}(\alpha) = \text{Quantile}_\alpha(\{z_\tau\}_{\tau=t-W}^{t-1}) \cdot \sigma_t$$
 
-2. Regulatory Backtesting Framework
+### Regulatory Backtesting Framework
 
 * Kupiec Unconditional Coverage Test ($LR_{\text{uc}}$)
 
@@ -101,7 +101,7 @@ $$L(\hat{\Pi}_1) = (1 - \pi)^{T_{00} + T_{10}} \pi^{T_{01} + T_{11}}, \quad L(\h
 
 $$LR_{\text{cc}} = LR_{\text{uc}} + LR_{\text{ind}} \sim \chi^2(2)$$
 
-3. Coherent Risk Measures: Expected Shortfall (CVaR)
+### Coherent Risk Measures: Expected Shortfall (CVaR)
 
   To address the non-subadditivity of Value-at-Risk, the engine computes Expected Shortfall:
 
