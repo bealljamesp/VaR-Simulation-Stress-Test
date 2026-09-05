@@ -57,7 +57,7 @@ VaR-Simulation-Stress-Test/
 
 ## Mathematical Specification
 
-Dynamic Conditional Volatility
+### Dynamic Conditional Volatility
 
 * RiskMetrics EWMA Filter
 
