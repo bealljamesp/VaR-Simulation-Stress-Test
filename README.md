@@ -212,19 +212,19 @@ pytest -v
 
 ### The test suite in tests/test_stress_engine.py asserts 15 mechanical and mathematical guarantees:
 
--Kupiec POF Bounds: Verifies statistical non-rejection under perfect calibration (50 / 1000 breaches) and deterministic rejection under severe underestimation (150 / 1000 breaches).
+* Kupiec POF Bounds: Verifies statistical non-rejection under perfect calibration (50 / 1000 breaches) and deterministic rejection under severe underestimation (150 / 1000 breaches).
 
--Christoffersen Markov Transitions: Verifies clustering detection (p < 0.05) on sequential exceptions and graceful handling of zero-exception boundary states.
+* Christoffersen Markov Transitions: Verifies clustering detection (p < 0.05) on sequential exceptions and graceful handling of zero-exception boundary states.
 
--EWMA Monotonic Decay: Enforces that conditional variance strictly decreases across consecutive zero-return periods following an initial shock.
+* EWMA Monotonic Decay: Enforces that conditional variance strictly decreases across consecutive zero-return periods following an initial shock.
 
--GJR-GARCH Stationarity: Validates non-negativity bounds (ω, α, γ, β > 0) and verifies the stationarity constraint (α + β + 0.5γ < 1.0).
+* GJR-GARCH Stationarity: Validates non-negativity bounds (ω, α, γ, β > 0) and verifies the stationarity constraint (α + β + 0.5γ < 1.0).
 
--Expected Shortfall Coherence: Asserts the subadditivity and severity invariant where Expected Shortfall strictly exceeds Value-at-Risk (ES > VaR) on non-degenerate distributions.
+* Expected Shortfall Coherence: Asserts the subadditivity and severity invariant where Expected Shortfall strictly exceeds Value-at-Risk (ES > VaR) on non-degenerate distributions.
 
--BCBS Basel III Boundaries: Confirms exact regulatory traffic light zone assignments (Green: 0–4 breaches, Yellow: 5–9 breaches, Red: 10+ breaches) and corresponding capital multiplier penalties (3.00 to 4.00).
+* BCBS Basel III Boundaries: Confirms exact regulatory traffic light zone assignments (Green: 0–4 breaches, Yellow: 5–9 breaches, Red: 10+ breaches) and corresponding capital multiplier penalties (3.00 to 4.00).
 
--Tensor Geometry: Enforces valid probability bounds [0.0, 1.0], negative peak-to-trough drawdowns, and strict shape preservation across the (81, 5000, 90) float32 state space.
+* Tensor Geometry: Enforces valid probability bounds [0.0, 1.0], negative peak-to-trough drawdowns, and strict shape preservation across the (81, 5000, 90) float32 state space.
 
 ---
 
