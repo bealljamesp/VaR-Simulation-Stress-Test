@@ -57,37 +57,37 @@ VaR-Simulation-Stress-Test/
 
 ## Mathematical Specification
 
-* Dynamic Conditional Volatility
+1. Dynamic Conditional Volatility
 
-RiskMetrics EWMA Filter
+* RiskMetrics EWMA Filter
 
 $$\sigma_t^2 = \lambda \sigma_{t-1}^2 + (1 - \lambda) r_{t-1}^2 \quad (\lambda = 0.94)$$
 
-Asymmetric GJR-GARCH(1,1)
+* Asymmetric GJR-GARCH(1,1)
 
 $$\sigma_t^2 = \omega + \left( \alpha + \gamma \cdot \mathbb{I}_{\{r_{t-1} < 0\}} \right) r_{t-1}^2 + \beta \sigma_{t-1}^2$$
 
-Subject to parameter constraints:
+* Subject to parameter constraints:
 
 $$\omega > 0, \quad \alpha \ge 0, \quad \gamma \ge 0, \quad \beta \ge 0, \quad \alpha + \beta + 0.5\gamma < 1.0$$
 
-Filtered Historical Simulation (FHS)Standardized innovations are filtered from conditional volatility:
+* Filtered Historical Simulation (FHS)Standardized innovations are filtered from conditional volatility:
 
 $$z_t = \frac{r_t}{\sigma_t}$$
 
-The dynamic out-of-sample loss cutoff is computed via the empirical quantile of historical residuals:
+* The dynamic out-of-sample loss cutoff is computed via the empirical quantile of historical residuals:
 
 $$\text{VaR}_t^{\text{FHS}}(\alpha) = \text{Quantile}_\alpha(\{z_\tau\}_{\tau=t-W}^{t-1}) \cdot \sigma_t$$
 
-### Regulatory Backtesting Framework
+2. Regulatory Backtesting Framework
 
-Kupiec Unconditional Coverage Test ($LR_{\text{uc}}$)
+* Kupiec Unconditional Coverage Test ($LR_{\text{uc}}$)
 
 Evaluates whether empirical failure rate $\hat{p} = x / N$ statistically diverges from nominal rate $p = 1 - \alpha$:
 
 $$LR_{\text{uc}} = -2 \ln \left[ \frac{(1 - p)^{N-x} p^x}{(1 - \hat{p})^{N-x} \hat{p}^x} \right] \sim \chi^2(1)$$
 
-Christoffersen Independence Test ($LR_{\text{ind}}$)
+* Christoffersen Independence Test ($LR_{\text{ind}}$)
 
 Evaluates exception clustering using a first-order Markov chain:
 
@@ -97,11 +97,11 @@ where:
 
 $$L(\hat{\Pi}_1) = (1 - \pi)^{T_{00} + T_{10}} \pi^{T_{01} + T_{11}}, \quad L(\hat{\Pi}_2) = (1 - \pi_{01})^{T_{00}} \pi_{01}^{T_{01}} (1 - \pi_{11})^{T_{10}} \pi_{11}^{T_{11}}$$
 
-Combined Conditional Coverage Test ($LR_{\text{cc}}$)
+* Combined Conditional Coverage Test ($LR_{\text{cc}}$)
 
 $$LR_{\text{cc}} = LR_{\text{uc}} + LR_{\text{ind}} \sim \chi^2(2)$$
 
-### Coherent Risk Measures: Expected Shortfall (CVaR)
+3. Coherent Risk Measures: Expected Shortfall (CVaR)
 
   To address the non-subadditivity of Value-at-Risk, the engine computes Expected Shortfall:
 
@@ -125,7 +125,7 @@ Dynamic EWMA (λ=0.94)	26 / 502	5.18%	0.034 (p = 0.855)	0.368 (p = 0.544)	Accept
 Dynamic GJR-GARCH(1,1)	39 / 502	7.77%	6.983 (p = 0.008)	0.001 (p = 0.979)	Reject Unconditional
 Filtered Historical (FHS)	30 / 502	5.98%
 
-Takeaways
+### Takeaways
 
 The In-Sample Quantile Fallacy: In-sample static historical simulation guarantees an exact 5.00% breach rate by mathematical construction, creating a false sense of security while masking severe temporal shock clustering.
 
@@ -139,23 +139,23 @@ Distributional Breakdown in Multi-Asset Portfolios: Standard GJR-GARCH under nor
 
 The macroeconomic stress module simulates an 81-node Cartesian parameter space across:
 
-Annualized Volatility Tiers ($\sigma_{\text{ann}}$): 10%, 20%, 35%
+* Annualized Volatility Tiers ($\sigma_{\text{ann}}$): 10%, 20%, 35%
 
-Student-$t$ Tail Thickness ($\nu$): 3.5 (Fat), 8.0 (Normal), 30.0 (Thin)
+* Student-$t$ Tail Thickness ($\nu$): 3.5 (Fat), 8.0 (Normal), 30.0 (Thin)
 
-GJR Asymmetric Leverage ($\gamma$): 0.01, 0.05, 0.15
+* GJR Asymmetric Leverage ($\gamma$): 0.01, 0.05, 0.15
 
-Exogenous Macro Shocks ($s$): -15%, -30%, -50% at $t = 30$
+* Exogenous Macro Shocks ($s$): -15%, -30%, -50% at $t = 30$
 
 Memory & Execution Profile
 
-Tensor Dimensions: $(K=81\text{ nodes}) \times (P=5,000\text{ paths}) \times (T=90\text{ days})$
+* Tensor Dimensions: $(K=81\text{ nodes}) \times (P=5,000\text{ paths}) \times (T=90\text{ days})$
 
-Total Points Evaluated: 36,450,000 single-precision float32 values.
+* Total Points Evaluated: 36,450,000 single-precision float32 values.
 
-Contiguous Memory Footprint: $\approx 145.8\text{ MB}$.
+* Contiguous Memory Footprint: $\approx 145.8\text{ MB}$.
 
-Execution Latency: $< 3.0\text{ seconds}$ on modern multi-core hardware via broadcasted SIMD vectorization.
+* Execution Latency: $< 3.0\text{ seconds}$ on modern multi-core hardware via broadcasted SIMD vectorization.
 
 $$\mathbf{S}_{k, p, t} = 100 \cdot \exp\left( \sum_{\tau=1}^t \mathbf{R}_{k, p, \tau} \right)$$
 
