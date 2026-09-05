@@ -83,17 +83,17 @@ $$\text{VaR}_t^{\text{FHS}}(\alpha) = \text{Quantile}_\alpha(\{z_\tau\}_{\tau=t-
 
 * Kupiec Unconditional Coverage Test ($LR_{\text{uc}}$)
 
-Evaluates whether empirical failure rate $\hat{p} = x / N$ statistically diverges from nominal rate $p = 1 - \alpha$:
+: Evaluates whether empirical failure rate $\hat{p} = x / N$ statistically diverges from nominal rate $p = 1 - \alpha$:
 
 $$LR_{\text{uc}} = -2 \ln \left[ \frac{(1 - p)^{N-x} p^x}{(1 - \hat{p})^{N-x} \hat{p}^x} \right] \sim \chi^2(1)$$
 
 * Christoffersen Independence Test ($LR_{\text{ind}}$)
 
-Evaluates exception clustering using a first-order Markov chain:
+: Evaluates exception clustering using a first-order Markov chain:
 
 $$LR_{\text{ind}} = -2 \ln \left[ \frac{L(\hat{\Pi}_1)}{L(\hat{\Pi}_2)} \right] \sim \chi^2(1)$$
 
-where:
+: where:
 
 $$L(\hat{\Pi}_1) = (1 - \pi)^{T_{00} + T_{10}} \pi^{T_{01} + T_{11}}, \quad L(\hat{\Pi}_2) = (1 - \pi_{01})^{T_{00}} \pi_{01}^{T_{01}} (1 - \pi_{11})^{T_{10}} \pi_{11}^{T_{11}}$$
 
