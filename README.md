@@ -207,7 +207,7 @@ pytest -v
 ```
 ## Technical Invariants Tested
 
-The test suite in tests/test_stress_engine.py asserts 15 mechanical and mathematical guarantees:
+### The test suite in tests/test_stress_engine.py asserts 15 mechanical and mathematical guarantees:
 
 -Kupiec POF Bounds: Verifies statistical non-rejection under perfect calibration (50 / 1000 breaches) and deterministic rejection under severe underestimation (150 / 1000 breaches).
 
@@ -222,8 +222,10 @@ The test suite in tests/test_stress_engine.py asserts 15 mechanical and mathemat
 -BCBS Basel III Boundaries: Confirms exact regulatory traffic light zone assignments (Green: 0–4 breaches, Yellow: 5–9 breaches, Red: 10+ breaches) and corresponding capital multiplier penalties (3.00 to 4.00).
 
 -Tensor Geometry: Enforces valid probability bounds [0.0, 1.0], negative peak-to-trough drawdowns, and strict shape preservation across the (81, 5000, 90) float32 state space.
+---
 
 Author
+
 James Beall
 
 M.S. Applied Business Analytics | B.S. Theoretical Mathematics
