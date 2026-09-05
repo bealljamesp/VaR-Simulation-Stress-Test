@@ -83,17 +83,17 @@ $$\text{VaR}_t^{\text{FHS}}(\alpha) = \text{Quantile}_\alpha(\{z_\tau\}_{\tau=t-
 
 * Kupiec Unconditional Coverage Test ($LR_{\text{uc}}$)
 
-: Evaluates whether empirical failure rate $\hat{p} = x / N$ statistically diverges from nominal rate $p = 1 - \alpha$:
+Evaluates whether empirical failure rate $\hat{p} = x / N$ statistically diverges from nominal rate $p = 1 - \alpha$:
 
 $$LR_{\text{uc}} = -2 \ln \left[ \frac{(1 - p)^{N-x} p^x}{(1 - \hat{p})^{N-x} \hat{p}^x} \right] \sim \chi^2(1)$$
 
 * Christoffersen Independence Test ($LR_{\text{ind}}$)
 
-: Evaluates exception clustering using a first-order Markov chain:
+Evaluates exception clustering using a first-order Markov chain:
 
 $$LR_{\text{ind}} = -2 \ln \left[ \frac{L(\hat{\Pi}_1)}{L(\hat{\Pi}_2)} \right] \sim \chi^2(1)$$
 
-: where:
+where:
 
 $$L(\hat{\Pi}_1) = (1 - \pi)^{T_{00} + T_{10}} \pi^{T_{01} + T_{11}}, \quad L(\hat{\Pi}_2) = (1 - \pi_{01})^{T_{00}} \pi_{01}^{T_{01}} (1 - \pi_{11})^{T_{10}} \pi_{11}^{T_{11}}$$
 
@@ -113,17 +113,18 @@ $$\text{ES}_\alpha = \mathbb{E}\left[ -r_t \mid -r_t > \text{VaR}_\alpha \right]
 
 Tested across N = 502 out-of-sample trading days (W = 252 lookback window) during the 2007–2009 Global Financial Crisis at 95% confidence level (p = 0.05, Target Breaches = 25.1):
 
-Portfolio Regime	Risk Model Engine	Breaches / Obs	Empirical Rate	Kupiec POF (LR_uc)	Christoffersen (LR_ind)	Regulatory Verdict
-Financials (Sector Meltdown)	Rolling Historical (252d)	46 / 502	9.16%	14.861 (p < 0.001)	0.469 (p = 0.493)	Reject Unconditional
-Rolling Parametric (Normal)	44 / 502	8.76%	12.355 (p < 0.001)	0.248 (p = 0.618)	Reject Unconditional
-Dynamic EWMA (λ=0.94)	34 / 502	6.77%	3.005 (p = 0.083)	1.053 (p = 0.305)	Accept Both
-Dynamic GJR-GARCH(1,1)	34 / 502	6.77%	3.005 (p = 0.083)	1.207 (p = 0.272)	Accept Both
-Filtered Historical (FHS)	37 / 502	7.37%	5.215 (p = 0.022)	0.030 (p = 0.863)	Reject Unconditional
-Multi-Asset (Flight to Safety)	Rolling Historical (252d)	29 / 502	5.78%	0.609 (p = 0.435)	12.102 (p < 0.001)	Reject Independence
-Rolling Parametric (Normal)	31 / 502	6.18%	1.363 (p = 0.243)	7.091 (p = 0.008)	Reject Independence
-Dynamic EWMA (λ=0.94)	26 / 502	5.18%	0.034 (p = 0.855)	0.368 (p = 0.544)	Accept Both
-Dynamic GJR-GARCH(1,1)	39 / 502	7.77%	6.983 (p = 0.008)	0.001 (p = 0.979)	Reject Unconditional
-Filtered Historical (FHS)	30 / 502	5.98%
+| Portfolio Regime | Risk Model Engine | Breaches / Obs | Empirical Rate | Kupiec POF (LR_uc) | Christoffersen (LR_ind) | Regulatory Verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Financials** *(Sector Meltdown)* | Rolling Historical (252d) | 46 / 502 | 9.16% | 14.861 (*p* &lt; 0.001) | 0.469 (*p* = 0.493) | **Reject Unconditional** |
+| | Rolling Parametric (Normal) | 44 / 502 | 8.76% | 12.355 (*p* &lt; 0.001) | 0.248 (*p* = 0.618) | **Reject Unconditional** |
+| | **Dynamic EWMA (&lambda;=0.94)** | 34 / 502 | 6.77% | 3.005 (*p* = 0.083) | 1.053 (*p* = 0.305) | **Accept Both** |
+| | **Dynamic GJR-GARCH(1,1)** | 34 / 502 | 6.77% | 3.005 (*p* = 0.083) | 1.207 (*p* = 0.272) | **Accept Both** |
+| | Filtered Historical (FHS) | 37 / 502 | 7.37% | 5.215 (*p* = 0.022) | 0.030 (*p* = 0.863) | **Reject Unconditional** |
+| **Multi-Asset** *(Flight to Safety)* | Rolling Historical (252d) | 29 / 502 | 5.78% | 0.609 (*p* = 0.435) | 12.102 (*p* &lt; 0.001) | **Reject Independence** |
+| | Rolling Parametric (Normal) | 31 / 502 | 6.18% | 1.363 (*p* = 0.243) | 7.091 (*p* = 0.008) | **Reject Independence** |
+| | **Dynamic EWMA (&lambda;=0.94)** | 26 / 502 | 5.18% | 0.034 (*p* = 0.855) | 0.368 (*p* = 0.544) | **Accept Both** |
+| | Dynamic GJR-GARCH(1,1) | 39 / 502 | 7.77% | 6.983 (*p* = 0.008) | 0.001 (*p* = 0.979) | **Reject Unconditional** |
+| | **Filtered Historical (FHS)** | 30 / 502 | 5.98% | 0.950 (*p* = 0.330) | 0.043 (*p* = 0.835) | **Accept Both** |
 
 ### Takeaways
 
@@ -165,7 +166,10 @@ $$\mathbf{MDD}_{k, p} = \min_{t \in [1, T]} \left( \frac{\mathbf{S}_{k, p, t} - 
 
 ## Diagnostic Figures
 
-ArtifactPathDescriptionVaR Backtest Diagnosticsdata/plots/var_diagnostics_*.pngTime-series overlay of daily returns, time-varying VaR boundary bands, and exception breach clusters.4D Stress Surface Matrixdata/plots/stress_matrix_4d_surface.pngFaceted categorical surface contrasting shock severity vs. distress probability ($DD \le -40\%$).
+| Artifact | Path | Description |
+| :--- | :--- | :--- |
+| **VaR Backtest Diagnostics** | `data/plots/var_diagnostics_*.png` | Time-series overlay of daily returns, time-varying VaR boundary bands, and exception breach clusters. |
+| **4D Stress Surface Matrix** | `data/plots/stress_matrix_4d_surface.png` | Faceted categorical surface contrasting shock severity vs. distress probability ($DD \le -40\%$). |
 
 The visualization pipeline produces publication-quality figures formatted with matplotlib and seaborn:
 
